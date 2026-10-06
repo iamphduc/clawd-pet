@@ -31,6 +31,8 @@ const LABELS: Record<MoodKind, string> = {
   web: 'browsing',
   subagent: 'with a helper',
   waiting: 'needs you',
+  passed: 'checks passed!',
+  failed: 'checks failed',
   happy: 'done!',
   error: 'oops',
 }
@@ -52,6 +54,32 @@ export function detailForTool(input: Record<string, unknown>): string {
   if (path) return path.split(/[\\/]/).pop() ?? ''
   const text = pick('pattern') || pick('command') || pick('query') || pick('url') || pick('description')
   return text.length > 40 ? text.slice(0, 39) + '…' : text
+}
+
+// A shell step that runs tests, a build, a type check, or a linter: the tool
+// is the command itself, not a word inside an argument.
+const CHECK_STEPS = [
+  /^(npm|pnpm|yarn|bun)( run)? (test|build|lint|typecheck|check)\b/,
+  /^(npx|pnpm exec|bunx) (jest|vitest|tsc|eslint|playwright|mocha)\b/,
+  /^(jest|vitest|tsc|eslint|mocha|rspec|phpunit|ctest)\b/,
+  /^(python -m )?pytest\b/,
+  /^go (test|build|vet)\b/,
+  /^cargo (test|build|check|clippy)\b/,
+  /^dotnet (test|build)\b/,
+  /^(mvn|gradle|\.\/gradlew) .*\b(test|build|check)\b/,
+  /^make( (test|check|build))?$/,
+  /^claude plugin (test|validate)\b/,
+]
+const FAILED_OUTPUT = /\b[1-9]\d* (fail|failed|failing|failures?|errors?)\b|\bFAIL(ED)?\b|\bBuild failed\b/
+
+/** Whether a shell command runs tests, a build, a type check, or a linter. */
+export function isCheckCommand(command: string): boolean {
+  return command.split(/&&|\|\||;|\|/).some(step => CHECK_STEPS.some(re => re.test(step.trim())))
+}
+
+/** Whether a check command's run passed, from its error flag and its output. */
+export function checkPassed(isError: boolean, output: string): boolean {
+  return !isError && !FAILED_OUTPUT.test(output)
 }
 
 async function setMood($: EngineInterface, kind: MoodKind, detail = '', forMs = 0, then: MoodKind = 'idle') {
@@ -139,9 +167,14 @@ export const register: Register = on => {
     if (e.agentId !== undefined) return next(e)
 
     const tool = String(e.tool)
-    await setMood($, moodForTool(tool), detailForTool(e as Record<string, unknown>))
+    const input = e as Record<string, unknown>
+    await setMood($, moodForTool(tool), detailForTool(input))
     const result = await next(e)
-    if (result.isError || result.deny !== undefined) {
+    const command = typeof input.command === 'string' ? input.command : ''
+    if (moodForTool(tool) === 'running' && result.deny === undefined && isCheckCommand(command)) {
+      const passed = checkPassed(result.isError === true, typeof result.text === 'string' ? result.text : '')
+      await setMood($, passed ? 'passed' : 'failed', detailForTool(input), SHORT_MOOD_MS, 'thinking')
+    } else if (result.isError || result.deny !== undefined) {
       await setMood($, 'error', tool, SHORT_MOOD_MS, 'thinking')
     } else {
       await setMood($, 'thinking')
