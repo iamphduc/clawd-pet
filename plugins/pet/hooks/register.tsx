@@ -82,7 +82,17 @@ export function checkPassed(isError: boolean, output: string): boolean {
   return !isError && !FAILED_OUTPUT.test(output)
 }
 
+// The mood last set, kept outside $.state so the frame timer can decide to
+// skip a frame without a call.
+let lastKind: MoodKind = 'idle'
+
+/** The animation step for a frame: a sleeping Clawd moves at a quarter speed. */
+function frameTick(kind: MoodKind, tick: number): number {
+  return kind === 'sleeping' ? Math.floor(tick / 4) : tick
+}
+
 async function setMood($: EngineInterface, kind: MoodKind, detail = '', forMs = 0, then: MoodKind = 'idle') {
+  lastKind = kind
   const now = await $.clock.now()
   await update($, mood, () => ({ kind, detail, since: now, until: forMs ? now + forMs : 0, then }))
 }
@@ -91,6 +101,8 @@ export const register: Register = on => {
   // The band's id, learned when it first draws; the timer repaints it in place.
   let bandId: string | undefined
   let tick = 0
+  // The cells the band shows now, so a frame that changes nothing is not sent.
+  let lastCells = ''
   let hasWarned = false
   // The mood a permission prompt interrupted, and whether the approved tool has
   // been seen running since: Clawd goes back to it instead of waving on.
@@ -110,6 +122,10 @@ export const register: Register = on => {
     $.clock.every(FRAME_MS, () => {
       void (async () => {
         tick += 1
+        // Nothing to paint until the band has drawn once (never, on the desktop),
+        // and a sleeping Clawd paints once a second.
+        if (bandId === undefined) return
+        if (lastKind === 'sleeping' && tick % 4 !== 0) return
         let current = await read($, mood)
         const now = await $.clock.now()
         if (current.until && now > current.until) {
@@ -124,10 +140,10 @@ export const register: Register = on => {
           await setMood($, 'sleeping')
           current = await read($, mood)
         }
-        if (bandId !== undefined) {
-          const cells = encode(drawFrame(current.kind, tick, (await read($, context)) ?? 0, hourNow(now)))
-          await $.ui.blit({ requestId: bandId, key: 'pet', cells })
-        }
+        const cells = encode(drawFrame(current.kind, frameTick(current.kind, tick), (await read($, context)) ?? 0, hourNow(now)))
+        if (cells === lastCells) return
+        lastCells = cells
+        await $.ui.blit({ requestId: bandId, key: 'pet', cells })
         // A frame that fails (the band closing mid-repaint) is skipped; the next one tries again.
       })().catch(() => undefined)
     })
@@ -238,10 +254,12 @@ export const register: Register = on => {
     const hour = hourNow(await $.clock.now())
     const { Box, Raster, Text } = $.ui.resolve(e)
     const contextColor = percent >= CONTEXT_WARN ? 'red' : percent >= 65 ? 'yellow' : 'green'
+    const cells = encode(drawFrame(current.kind, frameTick(current.kind, tick), percent, hour))
+    lastCells = cells
 
     return (
       <Box flexDirection="row" alignItems="center" marginTop={1}>
-        <Raster key="pet" columns={COLUMNS} rows={ROWS} cells={encode(drawFrame(current.kind, tick, percent, hour))} />
+        <Raster key="pet" columns={COLUMNS} rows={ROWS} cells={cells} />
         <Box flexDirection="column" marginLeft={1}>
           <Text bold>{LABELS[current.kind]}</Text>
           {current.detail ? <Text dimColor>{current.detail}</Text> : null}
