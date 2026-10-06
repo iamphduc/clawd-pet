@@ -89,7 +89,8 @@ export const register: Register = on => {
     const name = typed === 'helper' ? 'subagent' : typed
     const kinds = Object.keys(LABELS) as MoodKind[]
     if (!kinds.includes(name as MoodKind)) {
-      return { text: `Moods: ${kinds.join(', ')}. Usage: /pet <mood> [seconds]` }
+      const list = kinds.map(k => (k === 'subagent' ? 'subagent (or helper)' : k)).join(', ')
+      return { text: `Moods: ${list}. Usage: /pet <mood> [seconds]` }
     }
     const seconds = Math.max(1, Number(secs) || 10)
     await setMood($, name as MoodKind, 'preview', seconds * 1000)
