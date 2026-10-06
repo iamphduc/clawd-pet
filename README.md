@@ -2,21 +2,22 @@
 
 Clawd, the Claude Code mascot, lives in the band above your prompt and acts out what Claude is doing.
 
-| Claude is... | Clawd... |
-| --- | --- |
-| Idle | Breathes, blinks, and looks around. Falls asleep after a minute. |
-| Thinking | Looks up beside a thought bubble. |
-| Reading a file | Hops beside a book whose page flips. |
-| Editing a file | Hops while a pencil writes. |
-| Searching | Hops while a magnifier sweeps. |
-| Running a command | Hops beside a terminal with a blinking cursor. |
-| Browsing the web | Hops beside a turning globe. |
-| Running a subagent | Brings a small helper Clawd. |
-| Waiting for you | Waves beside a "?" bubble while Claude asks you a question or a permission prompt is open. After you approve a long command, Clawd goes back to work once the command starts running. |
-| Running tests or a build that passes | Hops with happy eyes beside a green check. |
-| Running tests or a build that fails | Squashes down with closed eyes beside a red X. |
-| Done with a turn | Jumps with happy eyes and sparkles. |
-| Hitting an error | Shows X eyes, a sweat drop, and a red "!". |
+| Claude is... | Clawd... | Looks like |
+| --- | --- | --- |
+| Idle | Breathes, blinks, and looks around. | <img src="docs/moods/idle.png" alt="Clawd idle" width="248"> |
+| Idle for a minute | Falls asleep, with Z's rising. | <img src="docs/moods/sleeping.png" alt="Clawd asleep" width="248"> |
+| Thinking | Looks up beside a thought bubble. | <img src="docs/moods/thinking.png" alt="Clawd thinking" width="248"> |
+| Reading a file | Hops beside a book whose page flips. | <img src="docs/moods/reading.png" alt="Clawd reading" width="248"> |
+| Editing a file | Hops while a pencil writes. | <img src="docs/moods/editing.png" alt="Clawd editing" width="248"> |
+| Searching | Hops while a magnifier sweeps. | <img src="docs/moods/searching.png" alt="Clawd searching" width="248"> |
+| Running a command | Hops beside a terminal with a blinking cursor. | <img src="docs/moods/running.png" alt="Clawd running a command" width="248"> |
+| Browsing the web | Hops beside a turning globe. | <img src="docs/moods/web.png" alt="Clawd browsing" width="248"> |
+| Running a subagent | Brings a small helper Clawd. | <img src="docs/moods/subagent.png" alt="Clawd with a helper" width="248"> |
+| Waiting for you | Waves beside a "?" bubble while Claude asks you a question or a permission prompt is open. After you approve a long command, Clawd goes back to work once the command starts running. | <img src="docs/moods/waiting.png" alt="Clawd waving" width="248"> |
+| Running tests or a build that passes | Hops with happy eyes beside a green check. | <img src="docs/moods/passed.png" alt="Clawd after passing checks" width="248"> |
+| Running tests or a build that fails | Squashes down with closed eyes beside a red X. | <img src="docs/moods/failed.png" alt="Clawd after failing checks" width="248"> |
+| Done with a turn | Jumps with happy eyes and sparkles. | <img src="docs/moods/happy.png" alt="Clawd cheering" width="248"> |
+| Hitting an error | Shows X eyes, a sweat drop, and a red "!". | <img src="docs/moods/error.png" alt="Clawd after an error" width="248"> |
 
 ## Time of day
 
@@ -24,6 +25,8 @@ Clawd follows your computer's local time:
 
 - From midnight to 6 a.m., Clawd wears a striped nightcap in every mood.
 - From 6 to 11 a.m., an idle Clawd has a steaming mug of coffee beside it. When the context battery is showing, the battery takes its place.
+
+<img src="docs/moods/nightcap.png" alt="Clawd in a nightcap" width="248"> <img src="docs/moods/coffee.png" alt="Clawd with coffee" width="248">
 
 ## Test and build results
 
@@ -38,6 +41,9 @@ Clawd reacts for 3 seconds when Claude runs a check: tests, a build, a type chec
 Clawd shows how full the context window is, so you know when to run `/compact`.
 
 - When the context is 50% full or more, a battery appears beside Clawd every time Clawd is idle or asleep. The battery drains as the context fills: green, then yellow from 65%, then red from 80%.
+
+  <img src="docs/moods/battery.png" alt="Clawd with the context battery at 72%" width="248">
+
 - While Claude works, Clawd holds the prop for its task instead. The battery comes back each time Claude finishes.
 - A "context N%" line in the same color shows under the mood name in every mood.
 - At 80%, a toast tells you once to run `/compact`.
@@ -95,6 +101,7 @@ The pet is a hooks-module plugin in `plugins/pet`:
 - `hooks/register.tsx` turns turn and tool events into moods and draws the band.
 - `hooks/sprites.ts` holds the pixel art. Each terminal cell draws 2 x 2 pixels with quarter-block characters.
 - `tests/pet.test.ts` holds the tests.
+- `scripts/render-moods.mjs` renders the animated mood images in `docs/moods/` from the sprite code. After you change the art, run `node scripts/render-moods.mjs` to update them.
 
 To load your working copy in one session:
 
