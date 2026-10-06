@@ -19,6 +19,8 @@ const mood = atom({ plugin: 'pet', key: 'mood' } as const, {
   then: 'idle',
 } as Mood)
 const context = atom({ plugin: 'pet', key: 'context' } as const, null as number | null)
+// Kept in $.state, not the module, so a reload doesn't show the toast again.
+const hasWarned = atom({ plugin: 'pet', key: 'hasWarned' } as const, false)
 
 const LABELS: Record<MoodKind, string> = {
   idle: 'chilling',
@@ -103,7 +105,6 @@ export const register: Register = on => {
   let tick = 0
   // The cells the band shows now, so a frame that changes nothing is not sent.
   let lastCells = ''
-  let hasWarned = false
   // The mood a permission prompt interrupted, and whether the approved tool has
   // been seen running since: Clawd goes back to it instead of waving on.
   let beforePrompt: { kind: MoodKind; detail: string } | undefined
@@ -177,11 +178,11 @@ export const register: Register = on => {
   on('session.measure', async ($, e, next) => {
     const percent = e.context.percent ?? null
     await update($, context, () => percent)
-    if (percent !== null && percent >= CONTEXT_WARN && !hasWarned) {
-      hasWarned = true
+    if (percent !== null && percent >= CONTEXT_WARN && !(await read($, hasWarned))) {
+      await update($, hasWarned, () => true)
       $.ui.toast(`Clawd is getting tired: context is ${percent}% full. Run /compact soon.`)
     } else if (percent !== null && percent < CONTEXT_WARN) {
-      hasWarned = false
+      await update($, hasWarned, () => false)
     }
     return next(e)
   })

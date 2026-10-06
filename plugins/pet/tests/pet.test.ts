@@ -211,3 +211,19 @@ describe('the frame timer', () => {
     expect(blits.length).toBeGreaterThan(0)
   })
 })
+
+test('the context toast shows once per climb past 80%', async ($, on) => {
+  mock.clock(on)
+  const toasts: string[] = []
+  on('session.measure', async () => ({ changed: ['context'] }) as never)
+  on('ui.toast', async ($, e) => (toasts.push(String(e.text)), {}) as never)
+  const measure = (percent: number) =>
+    $.session.measure({ context: { tokens: percent * 2000, window: 200_000, percent }, rateLimits: [], changed: ['context'] } as never)
+
+  await measure(82)
+  await measure(85)
+  expect(toasts.length).toBe(1)
+  await measure(30)
+  await measure(81)
+  expect(toasts.length).toBe(2)
+})

@@ -91,11 +91,14 @@ To load your working copy in one session:
 claude --plugin-dir ./plugins/pet
 ```
 
+Loading the plugin this way also writes the plugin API's types to `plugins/pet/.claude-plugin/types/`. That folder is gitignored, because Claude Code writes it to match your installed version. Until you load the plugin once, your editor reports false errors such as "Cannot find module 'claude-code'".
+
 To check your changes:
 
 ```bash
 claude plugin validate ./plugins/pet
 claude plugin test ./plugins/pet
+npx -p typescript tsc -p ./plugins/pet
 ```
 
 ## Uninstall
