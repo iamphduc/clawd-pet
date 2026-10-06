@@ -227,3 +227,26 @@ test('the context toast shows once per climb past 80%', async ($, on) => {
   await measure(81)
   expect(toasts.length).toBe(2)
 })
+
+test('/pet off hides Clawd and remembers it; /pet on brings it back', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  on('session.start', async () => ({ cwd: '/repo' }))
+  on('command.register', async () => ({ value: {} }) as never)
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return h(Text, {}, 'engine band') as never
+  })
+  const band = await $.ui.mount(BAND)
+  const pet = (args: string) =>
+    $.command.run({ command: 'pet', args, origin: { kind: 'user' }, presentation: {} } as never)
+
+  expect(await band.find({ type: 'Text', text: 'chilling' })).toBeDefined()
+  await pet('off')
+  expect(await band.find({ type: 'Text', text: 'chilling' })).toBeUndefined()
+  // A new session start reads the stored choice: still off.
+  await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
+  expect(await band.find({ type: 'Text', text: 'chilling' })).toBeUndefined()
+  await pet('on')
+  expect(await band.find({ type: 'Text', text: 'chilling' })).toBeDefined()
+})

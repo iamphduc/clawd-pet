@@ -75,7 +75,9 @@ To preview the battery, set a fake context fill with `/pet context <percent>`, s
 
 To preview the time of day, fake the hour for 10 seconds with `/pet hour <0-23>`, such as `/pet hour 8`.
 
-To hide the band, press `ctrl+x ctrl+a` or click `[-]`.
+To turn Clawd off while you focus, run `/pet off`. Clawd stays off in new sessions too, until you run `/pet on`. The context toast at 80% still shows while Clawd is off.
+
+To collapse the band for now, press `ctrl+x ctrl+a` or click `[-]`.
 
 ## Develop
 

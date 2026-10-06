@@ -34,6 +34,8 @@ declare module 'claude-code' {
       context: number | null
       /** Whether the context toast has shown since the context last dropped below the warning level. */
       hasWarned: boolean
+      /** Whether `/pet off` hid Clawd; also kept in $.store so it lasts across sessions. */
+      isOff: boolean
     }
   }
 }
