@@ -24,6 +24,7 @@ Clawd reacts for 3 seconds when Claude runs a check: tests, a build, a type chec
 
 - A command counts as a check when it starts with a test or build tool, such as `npm test`, `pnpm run build`, `npx vitest`, `pytest`, `go test`, `cargo build`, `tsc`, `eslint`, `make`, or `claude plugin test`. Steps after `&&`, `;`, or `|` count too. A command that only mentions a word, such as `git commit -m "add test"`, doesn't.
 - A check fails when the command exits with an error, or its output shows a failure count above zero ("2 failed") or `FAIL`. Otherwise it passes.
+- When a check is the last thing in a turn, Clawd keeps showing its result for 3 seconds after the turn ends, instead of the "done!" cheer.
 
 ## Context battery
 

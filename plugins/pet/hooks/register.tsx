@@ -184,7 +184,11 @@ export const register: Register = on => {
 
   on('turn.complete', async ($, e, next) => {
     if (e.agentId === undefined) {
-      if (e.reason === 'answer') await setMood($, 'happy', '', SHORT_MOOD_MS)
+      const current = await read($, mood)
+      // A check result that ends the turn stays up instead of the cheer, for its full time.
+      if (current.kind === 'passed' || current.kind === 'failed') {
+        await setMood($, current.kind, current.detail, SHORT_MOOD_MS)
+      } else if (e.reason === 'answer') await setMood($, 'happy', '', SHORT_MOOD_MS)
       else if (e.reason === 'aborted') await setMood($, 'idle')
       else await setMood($, 'error', e.reason, SHORT_MOOD_MS)
     }
