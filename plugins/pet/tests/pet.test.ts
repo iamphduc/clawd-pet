@@ -120,3 +120,16 @@ test('a failing test run makes the pet droop', async ($, on) => {
 
   expect(await band.find({ text: 'checks failed' })).toBeDefined()
 })
+
+test('a check result that ends the turn stays instead of the cheer', async ($, on) => {
+  mock.clock(on)
+  on('tool.call', async () => ({ result: 'ok', text: 'Tests: 1 failed, 3 passed' }))
+  on('turn.complete', async () => ({ text: '' }))
+  const band = await $.ui.mount(BAND)
+
+  await $.tool.call({ tool: 'Bash', command: 'npm test' })
+  await $.turn.complete({ reason: 'answer', answer: '', durationMs: 1, isAborted: false, turnId: 't1' })
+
+  expect(await band.find({ text: 'checks failed' })).toBeDefined()
+  expect(await band.find({ text: 'done!' })).toBeUndefined()
+})
