@@ -4,7 +4,7 @@ import type { MoodKind } from '../types'
 import { detailForTool, moodForTool } from '../hooks/register'
 import { COLUMNS, ROWS, drawFrame, encode } from '../hooks/sprites'
 
-const KINDS: MoodKind[] = ['idle', 'sleeping', 'thinking', 'reading', 'editing', 'searching', 'running', 'web', 'subagent', 'happy', 'error']
+const KINDS: MoodKind[] = ['idle', 'sleeping', 'thinking', 'reading', 'editing', 'searching', 'running', 'web', 'subagent', 'waiting', 'happy', 'error']
 
 test('every mood draws a full raster on every tick', async () => {
   for (const kind of KINDS) {
@@ -66,4 +66,19 @@ test('idle and sleeping draw a battery at any context fill', async () => {
       expect(encode(drawFrame(kind, 3, percent)).length).toBe(Math.ceil((COLUMNS * ROWS * 12) / 3) * 4)
     }
   }
+})
+
+test('the pet waits while a question is open', async ($, on) => {
+  mock.clock(on)
+  let during: string | undefined
+  let band: Awaited<ReturnType<typeof $.ui.mount<'terminal', 'AbovePrompt'>>> | undefined
+  on('tool.call', async () => {
+    during = (await band?.find({ type: 'Text', text: /needs you|thinking/ }))?.text
+    return { result: 'ok' }
+  })
+  band = await $.ui.mount(BAND)
+
+  await $.tool.call({ tool: 'AskUserQuestion', questions: [] })
+
+  expect(during).toBe('needs you')
 })

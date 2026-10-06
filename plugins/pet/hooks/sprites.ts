@@ -68,15 +68,20 @@ const EYES = {
 }
 
 type Eyes = keyof typeof EYES | 'cross'
-type Pose = { lift?: number; squash?: boolean; step?: boolean; eyes?: Eyes; look?: number }
+type Pose = { lift?: number; squash?: boolean; step?: boolean; eyes?: Eyes; look?: number; wave?: boolean }
 
-function drawPet(canvas: Canvas, { lift = 0, squash = false, step = false, eyes = 'open', look = 0 }: Pose) {
+function drawPet(canvas: Canvas, { lift = 0, squash = false, step = false, eyes = 'open', look = 0, wave = false }: Pose) {
   const legs = LEGS[step ? 1 : 0] ?? ''
   let art = scale2([HEAD, HEAD, ARMS, HEAD, legs])
   // Squash drops one belly row so Clawd looks like it breathes out.
   if (squash) art = art.filter((_, i) => i !== 6)
   const y = HEIGHT - art.length - lift
   stamp(canvas, art, 0, y)
+  if (wave) {
+    // Wave the right arm: it rises to a short diagonal, then rests.
+    stamp(canvas, ['____', '____'], 30, y + 4)
+    stamp(canvas, ['..oo', '..oo', 'oo..', 'oo..'], 30, y + 2)
+  }
   if (eyes === 'cross') {
     stamp(canvas, ['r.r', '.r.', 'r.r'], 10, y + 1)
     stamp(canvas, ['r.r', '.r.', 'r.r'], 24, y + 1)
@@ -171,6 +176,10 @@ function drawProp(canvas: Canvas, kind: MoodKind, tick: number) {
       // A helper Clawd: the logo at its own size.
       stamp(canvas, [HEAD, FACE, ARMS, HEAD, LEGS[odd ? 1 : 0] ?? ''], PX + 2, odd ? 6 : 7)
       return
+    case 'waiting':
+      stamp(canvas, wide(['.wwwww.', 'wwkkkww', 'wwwwkww', 'wwwkwww', 'wwwwwww', 'wwwkwww', '.wwwww.']), PX + 2, 0)
+      stamp(canvas, wide(['w']), PX, 8)
+      return
     case 'idle':
       return
   }
@@ -202,6 +211,9 @@ export function drawFrame(kind: MoodKind, tick: number, context = 0): Canvas {
       break
     case 'error':
       drawPet(canvas, { squash: true, eyes: 'cross' })
+      break
+    case 'waiting':
+      drawPet(canvas, { eyes: 'up', look: 2, wave: odd })
       break
     case 'subagent':
       drawPet(canvas, { squash: breath, look: 2 })
