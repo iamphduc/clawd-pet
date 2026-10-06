@@ -18,6 +18,13 @@ Clawd, the Claude Code mascot, lives in the band above your prompt and acts out 
 | Done with a turn | Jumps with happy eyes and sparkles. |
 | Hitting an error | Shows X eyes, a sweat drop, and a red "!". |
 
+## Time of day
+
+Clawd follows your computer's local time:
+
+- From midnight to 6 a.m., Clawd wears a striped nightcap in every mood.
+- From 6 to 11 a.m., an idle Clawd has a steaming mug of coffee beside it. When the context battery is showing, the battery takes its place.
+
 ## Test and build results
 
 Clawd reacts for 3 seconds when Claude runs a check: tests, a build, a type check, or a linter.
@@ -65,6 +72,8 @@ Clawd reacts on its own. To preview a mood, run `/pet <mood> [seconds]`:
 `/pet` with no mood lists them all.
 
 To preview the battery, set a fake context fill with `/pet context <percent>`, such as `/pet context 72`. Your next prompt replaces it with the real value.
+
+To preview the time of day, fake the hour for 10 seconds with `/pet hour <0-23>`, such as `/pet hour 8`.
 
 To hide the band, press `ctrl+x ctrl+a` or click `[-]`.
 

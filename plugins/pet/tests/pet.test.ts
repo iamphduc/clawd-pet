@@ -133,3 +133,13 @@ test('a check result that ends the turn stays instead of the cheer', async ($, o
   expect(await band.find({ text: 'checks failed' })).toBeDefined()
   expect(await band.find({ text: 'done!' })).toBeUndefined()
 })
+
+test('night adds a cap and morning adds coffee, in every mood', async () => {
+  for (const kind of KINDS) {
+    for (const hour of [2, 8, 15]) {
+      expect(encode(drawFrame(kind, 5, 0, hour)).length).toBe(Math.ceil((COLUMNS * ROWS * 12) / 3) * 4)
+    }
+  }
+  expect(encode(drawFrame('idle', 1, 0, 2))).not.toBe(encode(drawFrame('idle', 1, 0, 15)))
+  expect(encode(drawFrame('idle', 1, 0, 8))).not.toBe(encode(drawFrame('idle', 1, 0, 15)))
+})

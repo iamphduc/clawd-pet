@@ -68,15 +68,26 @@ const EYES = {
 }
 
 type Eyes = keyof typeof EYES | 'cross'
-type Pose = { lift?: number; squash?: boolean; step?: boolean; eyes?: Eyes; look?: number; wave?: boolean }
+type Pose = { lift?: number; squash?: boolean; step?: boolean; eyes?: Eyes; look?: number; wave?: boolean; cap?: boolean }
 
-function drawPet(canvas: Canvas, { lift = 0, squash = false, step = false, eyes = 'open', look = 0, wave = false }: Pose) {
+function drawPet(canvas: Canvas, { lift = 0, squash = false, step = false, eyes = 'open', look = 0, wave = false, cap = false }: Pose) {
   const legs = LEGS[step ? 1 : 0] ?? ''
   let art = scale2([HEAD, HEAD, ARMS, HEAD, legs])
   // Squash drops one belly row so Clawd looks like it breathes out.
   if (squash) art = art.filter((_, i) => i !== 6)
   const y = HEIGHT - art.length - lift
   stamp(canvas, art, 0, y)
+  if (cap) {
+    // A striped nightcap on the head, its tip flopping down the right side to a pom-pom.
+    stamp(canvas, [
+      '..BBBBBBBBBBBBBBBBBBBB..........',
+      'BBccBBccBBccBBccBBccBBccBBcc....',
+      'wwwwwwwwwwwwwwwwwwwwwwwwccBBcc..',
+      '..........................BBccBB',
+      '............................wwww',
+      '............................wwww',
+    ], 6, y - 1)
+  }
   if (wave) {
     // Wave the right arm: it rises to a short diagonal, then rests.
     stamp(canvas, ['____', '____'], 30, y + 4)
@@ -94,6 +105,13 @@ function drawPet(canvas: Canvas, { lift = 0, squash = false, step = false, eyes 
 // Props sit to the right of Clawd, in a 24 x 12 area starting at x = 38,
 // drawn square (`wide`) so each character fills one cell's width.
 const PX = 38
+
+/** A mug of coffee with rising steam. */
+function drawCoffee(canvas: Canvas, tick: number) {
+  const steam = tick % 4 < 2 ? ['.g.g', 'g.g.', '.g.g'] : ['g.g.', '.g.g', 'g.g.']
+  stamp(canvas, wide(steam), PX + 2, 1)
+  stamp(canvas, wide(['wwwww..', 'wnnnwww', 'wwwww.w', 'wwwwwww', '.www...']), PX, 5)
+}
 
 /** A battery that drains as the context window fills. */
 function drawBattery(canvas: Canvas, percent: number, y: number) {
@@ -195,47 +213,51 @@ function drawProp(canvas: Canvas, kind: MoodKind, tick: number) {
  * One frame of Clawd in a mood. `context` is the context window's fill in
  * percent: from 50, an idle or sleeping Clawd shows a draining battery.
  */
-export function drawFrame(kind: MoodKind, tick: number, context = 0): Canvas {
+export function drawFrame(kind: MoodKind, tick: number, context = 0, hour = 12): Canvas {
   const canvas: Canvas = new Array(WIDTH * HEIGHT).fill(null)
   const odd = tick % 2 === 1
   const breath = tick % 8 >= 4
+  // Night, midnight to 6 a.m.: Clawd wears a nightcap in every mood.
+  const pet = (pose: Pose) => drawPet(canvas, { ...pose, cap: hour < 6 })
   switch (kind) {
     case 'idle': {
       const cycle = tick % 40
       const look = cycle >= 20 && cycle < 26 ? -2 : cycle >= 28 && cycle < 34 ? 2 : 0
-      drawPet(canvas, { squash: breath, eyes: tick % 16 === 0 ? 'shut' : 'open', look })
+      pet({ squash: breath, eyes: tick % 16 === 0 ? 'shut' : 'open', look })
       break
     }
     case 'sleeping':
-      drawPet(canvas, { squash: breath, eyes: 'shut' })
+      pet({ squash: breath, eyes: 'shut' })
       break
     case 'thinking':
-      drawPet(canvas, { squash: breath, eyes: tick % 12 === 0 ? 'shut' : 'up', look: 2 })
+      pet({ squash: breath, eyes: tick % 12 === 0 ? 'shut' : 'up', look: 2 })
       break
     case 'happy':
-      drawPet(canvas, { lift: odd ? 2 : 0, eyes: 'happy', step: odd })
+      pet({ lift: odd ? 2 : 0, eyes: 'happy', step: odd })
       break
     case 'error':
-      drawPet(canvas, { squash: true, eyes: 'cross' })
+      pet({ squash: true, eyes: 'cross' })
       break
     case 'waiting':
-      drawPet(canvas, { eyes: 'up', look: 2, wave: odd })
+      pet({ eyes: 'up', look: 2, wave: odd })
       break
     case 'passed':
-      drawPet(canvas, { lift: odd ? 2 : 0, eyes: 'happy', step: odd })
+      pet({ lift: odd ? 2 : 0, eyes: 'happy', step: odd })
       break
     case 'failed':
-      drawPet(canvas, { squash: true, eyes: 'shut' })
+      pet({ squash: true, eyes: 'shut' })
       break
     case 'subagent':
-      drawPet(canvas, { squash: breath, look: 2 })
+      pet({ squash: breath, look: 2 })
       break
     default:
       // reading, editing, searching, running, web: busy little steps
-      drawPet(canvas, { lift: odd ? 2 : 0, step: odd, look: 2 })
+      pet({ lift: odd ? 2 : 0, step: odd, look: 2 })
   }
   drawProp(canvas, kind, tick)
   if ((kind === 'idle' || kind === 'sleeping') && context >= 50) drawBattery(canvas, context, kind === 'sleeping' ? 8 : 6)
+  // Morning, 6 to 11 a.m.: coffee beside an idle Clawd, unless the battery is there.
+  else if (kind === 'idle' && hour >= 6 && hour < 11) drawCoffee(canvas, tick)
   return canvas
 }
 
