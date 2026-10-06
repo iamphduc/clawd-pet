@@ -32,6 +32,8 @@ declare module 'claude-code' {
       mood: Mood
       /** How full the context window is, 0 to 100; null before the first measure. */
       context: number | null
+      /** Whether the context toast has shown since the context last dropped below the warning level. */
+      hasWarned: boolean
     }
   }
 }
