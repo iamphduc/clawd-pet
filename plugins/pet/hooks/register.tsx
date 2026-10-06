@@ -21,6 +21,7 @@ const mood = atom({ plugin: 'pet', key: 'mood' } as const, {
 const context = atom({ plugin: 'pet', key: 'context' } as const, null as number | null)
 // Kept in $.state, not the module, so a reload doesn't show the toast again.
 const hasWarned = atom({ plugin: 'pet', key: 'hasWarned' } as const, false)
+const isOff = atom({ plugin: 'pet', key: 'isOff' } as const, false)
 
 const LABELS: Record<MoodKind, string> = {
   idle: 'chilling',
@@ -87,6 +88,8 @@ export function checkPassed(isError: boolean, output: string): boolean {
 // The mood last set, kept outside $.state so the frame timer can decide to
 // skip a frame without a call.
 let lastKind: MoodKind = 'idle'
+// Mirrors the isOff state for the frame timer, which skips all work while Clawd is off.
+let isOffNow = false
 
 /** The animation step for a frame: a sleeping Clawd moves at a quarter speed. */
 function frameTick(kind: MoodKind, tick: number): number {
@@ -116,16 +119,20 @@ export const register: Register = on => {
 
   on('session.start', async ($, e, next) => {
     await setMood($, 'idle')
+    // `/pet off` lasts across sessions until `/pet on`.
+    // A store that can't be read leaves Clawd on.
+    isOffNow = (await $.store.get('isOff').catch(() => false)) === true
+    await update($, isOff, () => isOffNow)
     await $.command.register({
       name: 'pet',
-      description: 'Preview a pet mood: /pet <mood> [seconds], /pet context <percent>, or /pet hour <0-23>. No mood lists them.',
+      description: 'Preview a pet mood: /pet <mood> [seconds], /pet context <percent>, /pet hour <0-23>, or /pet off | on. No mood lists them.',
     })
     $.clock.every(FRAME_MS, () => {
       void (async () => {
         tick += 1
         // Nothing to paint until the band has drawn once (never, on the desktop),
         // and a sleeping Clawd paints once a second.
-        if (bandId === undefined) return
+        if (bandId === undefined || isOffNow) return
         if (lastKind === 'sleeping' && tick % 4 !== 0) return
         let current = await read($, mood)
         const now = await $.clock.now()
@@ -153,6 +160,13 @@ export const register: Register = on => {
 
   on('command.run', { command: 'pet' }, async ($, e) => {
     const [typed = '', value = ''] = e.args.trim().split(/\s+/)
+    if (typed === 'off' || typed === 'on') {
+      isOffNow = typed === 'off'
+      await update($, isOff, () => isOffNow)
+      await $.store.set('isOff', isOffNow)
+      return { text: isOffNow ? 'Clawd is off. Run /pet on to bring it back.' : 'Clawd is back.' }
+    }
+    if (isOffNow) return { text: 'Clawd is off. Run /pet on first.' }
     if (typed === 'hour') {
       fakeHour = Math.min(23, Math.max(0, Math.floor(Number(value) || 0)))
       fakeHourUntil = (await $.clock.now()) + 10_000
@@ -167,7 +181,7 @@ export const register: Register = on => {
     const kinds = Object.keys(LABELS) as MoodKind[]
     if (!kinds.includes(name as MoodKind)) {
       const list = kinds.map(k => (k === 'subagent' ? 'subagent (or helper)' : k)).join(', ')
-      return { text: `Moods: ${list}. Usage: /pet <mood> [seconds], /pet context <percent>, or /pet hour <0-23>` }
+      return { text: `Moods: ${list}. Usage: /pet <mood> [seconds], /pet context <percent>, /pet hour <0-23>, or /pet off | on` }
     }
     const seconds = Math.max(1, Number(value) || 10)
     await setMood($, name as MoodKind, 'preview', seconds * 1000)
@@ -247,7 +261,7 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     // Raster is terminal only; elsewhere leave the band to the engine.
-    if (e.props.hasSurvey || e.surface !== 'terminal') return next(e)
+    if (e.props.hasSurvey || e.surface !== 'terminal' || (await read($, isOff))) return next(e)
 
     bandId = e.requestId
     const current = await read($, mood)
