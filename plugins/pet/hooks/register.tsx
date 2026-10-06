@@ -92,6 +92,10 @@ export const register: Register = on => {
   let bandId: string | undefined
   let tick = 0
   let hasWarned = false
+  // The mood a permission prompt interrupted, and whether the approved tool has
+  // been seen running since: Clawd goes back to it instead of waving on.
+  let beforePrompt: { kind: MoodKind; detail: string } | undefined
+  let isApprovedRunning = false
   // `/pet hour` fakes the hour until this time, for previews.
   let fakeHour = 0
   let fakeHourUntil = 0
@@ -111,6 +115,11 @@ export const register: Register = on => {
         if (current.until && now > current.until) {
           await setMood($, current.then)
           current = await read($, mood)
+        } else if (current.kind === 'waiting' && isApprovedRunning && beforePrompt !== undefined) {
+          await setMood($, beforePrompt.kind, beforePrompt.detail)
+          beforePrompt = undefined
+          isApprovedRunning = false
+          current = await read($, mood)
         } else if (current.kind === 'idle' && now - current.since > SLEEP_AFTER_MS) {
           await setMood($, 'sleeping')
           current = await read($, mood)
@@ -119,7 +128,8 @@ export const register: Register = on => {
           const cells = encode(drawFrame(current.kind, tick, (await read($, context)) ?? 0, hourNow(now)))
           await $.ui.blit({ requestId: bandId, key: 'pet', cells })
         }
-      })()
+        // A frame that fails (the band closing mid-repaint) is skipped; the next one tries again.
+      })().catch(() => undefined)
     })
     return next(e)
   })
@@ -162,7 +172,20 @@ export const register: Register = on => {
 
   // A permission prompt is about to show: Clawd waves until the tool call ends.
   on('classic.PermissionRequest', async ($, e, next) => {
-    if (e.agent_id === undefined) await setMood($, 'waiting', e.tool_name)
+    if (e.agent_id === undefined) {
+      const current = await read($, mood)
+      beforePrompt = { kind: current.kind, detail: current.detail }
+      isApprovedRunning = false
+      await setMood($, 'waiting', e.tool_name)
+    }
+    return next(e)
+  })
+
+  // A tool's progress row (the ctrl+b hint) only shows once the tool runs, so
+  // while Clawd waits it means the prompt was approved. Drawing can't write
+  // state, so the frame timer makes the switch.
+  on('ui.render', { component: 'ToolProgress' }, ($, e, next) => {
+    if (beforePrompt !== undefined) isApprovedRunning = true
     return next(e)
   })
 
@@ -179,6 +202,7 @@ export const register: Register = on => {
     const input = e as Record<string, unknown>
     await setMood($, moodForTool(tool), detailForTool(input))
     const result = await next(e)
+    beforePrompt = undefined
     const command = typeof input.command === 'string' ? input.command : ''
     if (moodForTool(tool) === 'running' && result.deny === undefined && isCheckCommand(command)) {
       const passed = checkPassed(result.isError === true, typeof result.text === 'string' ? result.text : '')

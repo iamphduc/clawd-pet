@@ -12,7 +12,7 @@ Clawd, the Claude Code mascot, lives in the band above your prompt and acts out 
 | Running a command | Hops beside a terminal with a blinking cursor. |
 | Browsing the web | Hops beside a turning globe. |
 | Running a subagent | Brings a small helper Clawd. |
-| Waiting for you | Waves beside a "?" bubble while Claude asks you a question or a permission prompt is open. After you approve a tool, Clawd keeps waving until that tool finishes. |
+| Waiting for you | Waves beside a "?" bubble while Claude asks you a question or a permission prompt is open. After you approve a long command, Clawd goes back to work once the command starts running. |
 | Running tests or a build that passes | Hops with happy eyes beside a green check. |
 | Running tests or a build that fails | Squashes down with closed eyes beside a red X. |
 | Done with a turn | Jumps with happy eyes and sparkles. |
