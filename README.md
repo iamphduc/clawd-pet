@@ -1,6 +1,10 @@
 # Clawd Pet
 
-Clawd, the Claude Code mascot, lives in the band above your prompt and acts out what Claude is doing.
+Clawd, the Claude Code mascot, lives in the band above your prompt and acts out what Claude is doing. When you run several sessions side by side, a glance tells you which one is working, which one needs you, and which one is done.
+
+<img src="docs/demo.gif" alt="Clawd above the prompt: thinking, editing, running tests, cheering when they pass, waving when Claude needs you, then done" width="588">
+
+This is an unofficial fan project, not affiliated with or endorsed by Anthropic.
 
 | Claude is... | Clawd... | Looks like |
 | --- | --- | --- |
