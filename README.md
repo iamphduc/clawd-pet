@@ -59,6 +59,15 @@ claude plugin install pet@clawd-pet
 
 Then start a new session or run `/reload-plugins`.
 
+## Update
+
+```bash
+claude plugin marketplace update clawd-pet
+claude plugin update pet@clawd-pet
+```
+
+Then start a new session or run `/reload-plugins`.
+
 ## Use
 
 Clawd reacts on its own. To preview a mood, run `/pet <mood> [seconds]`:
