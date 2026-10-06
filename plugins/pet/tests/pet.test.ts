@@ -143,3 +143,31 @@ test('night adds a cap and morning adds coffee, in every mood', async () => {
   expect(encode(drawFrame('idle', 1, 0, 2))).not.toBe(encode(drawFrame('idle', 1, 0, 15)))
   expect(encode(drawFrame('idle', 1, 0, 8))).not.toBe(encode(drawFrame('idle', 1, 0, 15)))
 })
+
+test('after a prompt is approved, Clawd stops waving once the tool runs', async ($, on) => {
+  const clock = mock.clock(on)
+  on('classic.PermissionRequest', async () => ({}))
+  on('ui.render', { component: 'ToolProgress' }, ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return h(Text, { dimColor: true }, '(ctrl+b to run in background)') as never
+  })
+  on('session.start', async () => ({ cwd: '/repo' }))
+  on('command.register', async () => ({ value: {} }) as never)
+  on('ui.blit', async () => ({}) as never)
+  const band = await $.ui.mount(BAND)
+  // Starts the frame timer, which makes the switch.
+  await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
+
+  await $.classic.PermissionRequest({ tool_name: 'Bash', tool_input: { command: 'npm run build' } })
+  expect(await band.find({ type: 'Text', text: 'needs you' })).toBeDefined()
+
+  await $.ui.mount({
+    plugin: 'pet',
+    surface: 'terminal',
+    component: 'ToolProgress',
+    props: { tool_use_id: 'toolu_1', kind: 'background_hint', hint: '(ctrl+b to run in background)' },
+  })
+  await clock.advance(600)
+
+  expect(await band.find({ type: 'Text', text: 'needs you' })).toBeUndefined()
+})
