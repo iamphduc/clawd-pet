@@ -15,6 +15,18 @@ Clawd, the Claude Code mascot, lives in the band above your prompt and acts out 
 | Done with a turn | Jumps with happy eyes and sparkles. |
 | Hitting an error | Shows X eyes, a sweat drop, and a red "!". |
 
+## Context battery
+
+Clawd shows how full the context window is, so you know when to run `/compact`.
+
+- When the context is 50% full or more, a battery appears beside Clawd every time Clawd is idle or asleep. The battery drains as the context fills: green, then yellow from 65%, then red from 80%.
+- While Claude works, Clawd holds the prop for its task instead. The battery comes back each time Claude finishes.
+- A "context N%" line in the same color shows under the mood name in every mood.
+- At 80%, a toast tells you once to run `/compact`.
+- The battery and the line go away when the context drops below 50%, for example after `/compact`.
+
+Claude Code measures the context after each turn, so a new or just-compacted session shows nothing until its next turn ends.
+
 ## Requirements
 
 - Claude Code in the terminal (tested on 2.1.289). The desktop app doesn't draw the pet.
@@ -40,6 +52,8 @@ Clawd reacts on its own. To preview a mood, run `/pet <mood> [seconds]`:
 ```
 
 `/pet` with no mood lists them all.
+
+To preview the battery, set a fake context fill with `/pet context <percent>`, such as `/pet context 72`. Your next prompt replaces it with the real value.
 
 To hide the band, press `ctrl+x ctrl+a` or click `[-]`.
 

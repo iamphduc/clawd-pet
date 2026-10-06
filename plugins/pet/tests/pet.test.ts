@@ -59,3 +59,11 @@ test('a failed tool makes the pet upset', async ($, on) => {
 
   expect(await band.find({ text: 'oops' })).toBeDefined()
 })
+
+test('idle and sleeping draw a battery at any context fill', async () => {
+  for (const kind of ['idle', 'sleeping'] as MoodKind[]) {
+    for (const percent of [0, 55, 70, 95]) {
+      expect(encode(drawFrame(kind, 3, percent)).length).toBe(Math.ceil((COLUMNS * ROWS * 12) / 3) * 4)
+    }
+  }
+})

@@ -25,6 +25,10 @@ export type Mood = {
 
 declare module 'claude-code' {
   interface PluginState {
-    pet: { mood: Mood }
+    pet: {
+      mood: Mood
+      /** How full the context window is, 0 to 100; null before the first measure. */
+      context: number | null
+    }
   }
 }
