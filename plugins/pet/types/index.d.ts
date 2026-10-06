@@ -9,6 +9,8 @@ export type MoodKind =
   | 'web'
   | 'subagent'
   | 'waiting'
+  | 'passed'
+  | 'failed'
   | 'happy'
   | 'error'
 

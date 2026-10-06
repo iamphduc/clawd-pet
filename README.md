@@ -13,8 +13,17 @@ Clawd, the Claude Code mascot, lives in the band above your prompt and acts out 
 | Browsing the web | Hops beside a turning globe. |
 | Running a subagent | Brings a small helper Clawd. |
 | Waiting for you | Waves beside a "?" bubble while Claude asks you a question or a permission prompt is open. After you approve a tool, Clawd keeps waving until that tool finishes. |
+| Running tests or a build that passes | Hops with happy eyes beside a green check. |
+| Running tests or a build that fails | Squashes down with closed eyes beside a red X. |
 | Done with a turn | Jumps with happy eyes and sparkles. |
 | Hitting an error | Shows X eyes, a sweat drop, and a red "!". |
+
+## Test and build results
+
+Clawd reacts for 3 seconds when Claude runs a check: tests, a build, a type check, or a linter.
+
+- A command counts as a check when it starts with a test or build tool, such as `npm test`, `pnpm run build`, `npx vitest`, `pytest`, `go test`, `cargo build`, `tsc`, `eslint`, `make`, or `claude plugin test`. Steps after `&&`, `;`, or `|` count too. A command that only mentions a word, such as `git commit -m "add test"`, doesn't.
+- A check fails when the command exits with an error, or its output shows a failure count above zero ("2 failed") or `FAIL`. Otherwise it passes.
 
 ## Context battery
 

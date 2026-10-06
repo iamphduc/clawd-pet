@@ -1,10 +1,10 @@
 import { expect, mock, test } from 'claude-code/testing'
 
 import type { MoodKind } from '../types'
-import { detailForTool, moodForTool } from '../hooks/register'
+import { checkPassed, detailForTool, isCheckCommand, moodForTool } from '../hooks/register'
 import { COLUMNS, ROWS, drawFrame, encode } from '../hooks/sprites'
 
-const KINDS: MoodKind[] = ['idle', 'sleeping', 'thinking', 'reading', 'editing', 'searching', 'running', 'web', 'subagent', 'waiting', 'happy', 'error']
+const KINDS: MoodKind[] = ['idle', 'sleeping', 'thinking', 'reading', 'editing', 'searching', 'running', 'web', 'subagent', 'waiting', 'passed', 'failed', 'happy', 'error']
 
 test('every mood draws a full raster on every tick', async () => {
   for (const kind of KINDS) {
@@ -81,4 +81,42 @@ test('the pet waits while a question is open', async ($, on) => {
   await $.tool.call({ tool: 'AskUserQuestion', questions: [] })
 
   expect(during).toBe('needs you')
+})
+
+test('check commands are told apart from commands that only mention them', async () => {
+  for (const command of ['npm test', 'pnpm run build', 'npx vitest run', 'pytest -q', 'cargo test --all', 'tsc -p .', 'cd app && go test ./...', 'claude plugin test ./plugins/pet', 'make']) {
+    expect(isCheckCommand(command)).toBe(true)
+  }
+  for (const command of ['git status', 'git commit -m "add test"', 'echo build', 'ls tests', 'npm install']) {
+    expect(isCheckCommand(command)).toBe(false)
+  }
+})
+
+test('a check passes only with no error and no failures in its output', async () => {
+  expect(checkPassed(false, 'Tests: 12 passed, 12 total')).toBe(true)
+  expect(checkPassed(false, '9 pass\n0 fail')).toBe(true)
+  expect(checkPassed(false, '8 pass\n1 fail')).toBe(false)
+  expect(checkPassed(false, 'Tests: 2 failed, 10 passed')).toBe(false)
+  expect(checkPassed(false, 'FAIL src/app.test.ts')).toBe(false)
+  expect(checkPassed(true, '')).toBe(false)
+})
+
+test('a passing test run makes the pet cheer', async ($, on) => {
+  mock.clock(on)
+  on('tool.call', async () => ({ result: 'ok', text: '4 pass\n0 fail' }))
+  const band = await $.ui.mount(BAND)
+
+  await $.tool.call({ tool: 'Bash', command: 'npm test' })
+
+  expect(await band.find({ text: 'checks passed!' })).toBeDefined()
+})
+
+test('a failing test run makes the pet droop', async ($, on) => {
+  mock.clock(on)
+  on('tool.call', async () => ({ result: 'ok', text: 'Tests: 1 failed, 3 passed' }))
+  const band = await $.ui.mount(BAND)
+
+  await $.tool.call({ tool: 'Bash', command: 'npx vitest run' })
+
+  expect(await band.find({ text: 'checks failed' })).toBeDefined()
 })

@@ -180,6 +180,12 @@ function drawProp(canvas: Canvas, kind: MoodKind, tick: number) {
       stamp(canvas, wide(['.wwwww.', 'wwkkkww', 'wwwwkww', 'wwwkwww', 'wwwwwww', 'wwwkwww', '.wwwww.']), PX + 2, 0)
       stamp(canvas, wide(['w']), PX, 8)
       return
+    case 'passed':
+      stamp(canvas, wide(['.....G', '....GG', 'G..GG.', 'GGGG..', '.GG...']), PX + 2, odd ? 2 : 3)
+      return
+    case 'failed':
+      stamp(canvas, wide(['r...r', '.r.r.', '..r..', '.r.r.', 'r...r']), PX + 2, 3)
+      return
     case 'idle':
       return
   }
@@ -214,6 +220,12 @@ export function drawFrame(kind: MoodKind, tick: number, context = 0): Canvas {
       break
     case 'waiting':
       drawPet(canvas, { eyes: 'up', look: 2, wave: odd })
+      break
+    case 'passed':
+      drawPet(canvas, { lift: odd ? 2 : 0, eyes: 'happy', step: odd })
+      break
+    case 'failed':
+      drawPet(canvas, { squash: true, eyes: 'shut' })
       break
     case 'subagent':
       drawPet(canvas, { squash: breath, look: 2 })
