@@ -92,12 +92,16 @@ export const register: Register = on => {
   let bandId: string | undefined
   let tick = 0
   let hasWarned = false
+  // `/pet hour` fakes the hour until this time, for previews.
+  let fakeHour = 0
+  let fakeHourUntil = 0
+  const hourNow = (now: number) => (now < fakeHourUntil ? fakeHour : new Date(now).getHours())
 
   on('session.start', async ($, e, next) => {
     await setMood($, 'idle')
     await $.command.register({
       name: 'pet',
-      description: 'Preview a pet mood: /pet <mood> [seconds], or /pet context <percent>. No mood lists them.',
+      description: 'Preview a pet mood: /pet <mood> [seconds], /pet context <percent>, or /pet hour <0-23>. No mood lists them.',
     })
     $.clock.every(FRAME_MS, () => {
       void (async () => {
@@ -112,7 +116,7 @@ export const register: Register = on => {
           current = await read($, mood)
         }
         if (bandId !== undefined) {
-          const cells = encode(drawFrame(current.kind, tick, (await read($, context)) ?? 0))
+          const cells = encode(drawFrame(current.kind, tick, (await read($, context)) ?? 0, hourNow(now)))
           await $.ui.blit({ requestId: bandId, key: 'pet', cells })
         }
       })()
@@ -122,6 +126,11 @@ export const register: Register = on => {
 
   on('command.run', { command: 'pet' }, async ($, e) => {
     const [typed = '', value = ''] = e.args.trim().split(/\s+/)
+    if (typed === 'hour') {
+      fakeHour = Math.min(23, Math.max(0, Math.floor(Number(value) || 0)))
+      fakeHourUntil = (await $.clock.now()) + 10_000
+      return { text: `Pretending it's ${fakeHour}:00 for 10s.` }
+    }
     if (typed === 'context') {
       const percent = Math.min(100, Math.max(0, Number(value) || 0))
       await update($, context, () => percent)
@@ -131,7 +140,7 @@ export const register: Register = on => {
     const kinds = Object.keys(LABELS) as MoodKind[]
     if (!kinds.includes(name as MoodKind)) {
       const list = kinds.map(k => (k === 'subagent' ? 'subagent (or helper)' : k)).join(', ')
-      return { text: `Moods: ${list}. Usage: /pet <mood> [seconds], or /pet context <percent>` }
+      return { text: `Moods: ${list}. Usage: /pet <mood> [seconds], /pet context <percent>, or /pet hour <0-23>` }
     }
     const seconds = Math.max(1, Number(value) || 10)
     await setMood($, name as MoodKind, 'preview', seconds * 1000)
@@ -202,12 +211,13 @@ export const register: Register = on => {
     bandId = e.requestId
     const current = await read($, mood)
     const percent = (await read($, context)) ?? 0
+    const hour = hourNow(await $.clock.now())
     const { Box, Raster, Text } = $.ui.resolve(e)
     const contextColor = percent >= CONTEXT_WARN ? 'red' : percent >= 65 ? 'yellow' : 'green'
 
     return (
       <Box flexDirection="row" alignItems="center" marginTop={1}>
-        <Raster key="pet" columns={COLUMNS} rows={ROWS} cells={encode(drawFrame(current.kind, tick, percent))} />
+        <Raster key="pet" columns={COLUMNS} rows={ROWS} cells={encode(drawFrame(current.kind, tick, percent, hour))} />
         <Box flexDirection="column" marginLeft={1}>
           <Text bold>{LABELS[current.kind]}</Text>
           {current.detail ? <Text dimColor>{current.detail}</Text> : null}
