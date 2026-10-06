@@ -30,6 +30,7 @@ const LABELS: Record<MoodKind, string> = {
   running: 'running',
   web: 'browsing',
   subagent: 'with a helper',
+  waiting: 'needs you',
   happy: 'done!',
   error: 'oops',
 }
@@ -41,6 +42,7 @@ export function moodForTool(tool: string): MoodKind {
   if (['Bash', 'PowerShell'].includes(tool)) return 'running'
   if (['WebFetch', 'WebSearch'].includes(tool)) return 'web'
   if (['Agent', 'Task'].includes(tool)) return 'subagent'
+  if (tool === 'AskUserQuestion') return 'waiting'
   return 'thinking'
 }
 
@@ -118,6 +120,12 @@ export const register: Register = on => {
     } else if (percent !== null && percent < CONTEXT_WARN) {
       hasWarned = false
     }
+    return next(e)
+  })
+
+  // A permission prompt is about to show: Clawd waves until the tool call ends.
+  on('classic.PermissionRequest', async ($, e, next) => {
+    if (e.agent_id === undefined) await setMood($, 'waiting', e.tool_name)
     return next(e)
   })
 
