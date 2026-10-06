@@ -3,7 +3,7 @@
   "owner": { "name": "iamphduc" },
   "metadata": {
     "description": "Clawd, a pixel pet for the Claude Code terminal.",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "plugins": [
     {
