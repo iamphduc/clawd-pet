@@ -1,4 +1,5 @@
-import { expect, mock, test } from 'claude-code/testing'
+import { describe, expect, mock, test } from 'claude-code/testing'
+import type { TestBody } from 'claude-code/testing'
 
 import type { MoodKind } from '../types'
 import { checkPassed, detailForTool, isCheckCommand, moodForTool } from '../hooks/register'
@@ -170,4 +171,43 @@ test('after a prompt is approved, Clawd stops waving once the tool runs', async 
   await clock.advance(600)
 
   expect(await band.find({ type: 'Text', text: 'needs you' })).toBeUndefined()
+})
+
+describe('the frame timer', () => {
+  const start = async (...[$, on]: Parameters<TestBody>) => {
+    const clock = mock.clock(on)
+    const blits: string[] = []
+    on('session.start', async () => ({ cwd: '/repo' }))
+    on('command.register', async () => ({ value: {} }) as never)
+    on('ui.blit', async ($, e) => (blits.push('cells' in e ? e.cells : ''), {}) as never)
+    on('tool.call', async () => ({ result: 'ok', text: 'Tests: 1 failed' }))
+    await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
+    return { clock, blits }
+  }
+
+  test('paints nothing before the band has drawn', async ($, on) => {
+    const { clock, blits } = await start($, on)
+    await clock.advance(2_000)
+    expect(blits.length).toBe(0)
+  })
+
+  test('skips frames that change nothing', async ($, on) => {
+    const { clock, blits } = await start($, on)
+    await $.ui.mount(BAND)
+    await $.tool.call({ tool: 'Bash', command: 'npm test' })
+    blits.length = 0
+    // 'failed' holds still: 8 ticks in 2 s, at most one real change.
+    await clock.advance(2_000)
+    expect(blits.length).toBeLessThanOrEqual(1)
+  })
+
+  test('paints a sleeping Clawd once a second', async ($, on) => {
+    const { clock, blits } = await start($, on)
+    await $.ui.mount(BAND)
+    await clock.advance(61_000)
+    blits.length = 0
+    await clock.advance(8_000)
+    expect(blits.length).toBeLessThanOrEqual(8)
+    expect(blits.length).toBeGreaterThan(0)
+  })
 })
