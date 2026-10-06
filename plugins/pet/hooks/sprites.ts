@@ -90,6 +90,14 @@ function drawPet(canvas: Canvas, { lift = 0, squash = false, step = false, eyes 
 // drawn square (`wide`) so each character fills one cell's width.
 const PX = 38
 
+/** A battery that drains as the context window fills. */
+function drawBattery(canvas: Canvas, percent: number, y: number) {
+  const left = Math.max(0, Math.min(7, Math.round((7 * (100 - percent)) / 100)))
+  const fill = percent >= 80 ? 'r' : percent >= 65 ? 'y' : 'G'
+  const inside = fill.repeat(left) + 'k'.repeat(7 - left)
+  stamp(canvas, wide(['ggggggggg.', 'g' + inside + 'gg', 'g' + inside + 'gg', 'ggggggggg.']), PX, y)
+}
+
 function drawProp(canvas: Canvas, kind: MoodKind, tick: number) {
   const odd = tick % 2 === 1
   switch (kind) {
@@ -144,8 +152,8 @@ function drawProp(canvas: Canvas, kind: MoodKind, tick: number) {
     }
     case 'sleeping': {
       const rise = tick % 6
-      stamp(canvas, wide(['gggg', '..g.', '.g..', 'gggg']), PX, 8 - rise)
-      stamp(canvas, wide(['ggg', '.g.', 'ggg']), PX + 10, 5 - rise)
+      stamp(canvas, wide(['gggg', '..g.', '.g..', 'gggg']), PX, 4 - rise)
+      stamp(canvas, wide(['ggg', '.g.', 'ggg']), PX + 10, 2 - rise)
       return
     }
     case 'happy': {
@@ -168,7 +176,11 @@ function drawProp(canvas: Canvas, kind: MoodKind, tick: number) {
   }
 }
 
-export function drawFrame(kind: MoodKind, tick: number): Canvas {
+/**
+ * One frame of Clawd in a mood. `context` is the context window's fill in
+ * percent: from 50, an idle or sleeping Clawd shows a draining battery.
+ */
+export function drawFrame(kind: MoodKind, tick: number, context = 0): Canvas {
   const canvas: Canvas = new Array(WIDTH * HEIGHT).fill(null)
   const odd = tick % 2 === 1
   const breath = tick % 8 >= 4
@@ -199,6 +211,7 @@ export function drawFrame(kind: MoodKind, tick: number): Canvas {
       drawPet(canvas, { lift: odd ? 2 : 0, step: odd, look: 2 })
   }
   drawProp(canvas, kind, tick)
+  if ((kind === 'idle' || kind === 'sleeping') && context >= 50) drawBattery(canvas, context, kind === 'sleeping' ? 8 : 6)
   return canvas
 }
 

@@ -7,6 +7,9 @@ import { COLUMNS, ROWS, drawFrame, encode } from './sprites'
 const FRAME_MS = 250
 const SLEEP_AFTER_MS = 60_000
 const SHORT_MOOD_MS = 3_000
+// Context use, in percent, at which Clawd shows its battery and then warns.
+const CONTEXT_SHOW = 50
+const CONTEXT_WARN = 80
 
 const mood = atom({ plugin: 'pet', key: 'mood' } as const, {
   kind: 'idle',
@@ -15,6 +18,7 @@ const mood = atom({ plugin: 'pet', key: 'mood' } as const, {
   until: 0,
   then: 'idle',
 } as Mood)
+const context = atom({ plugin: 'pet', key: 'context' } as const, null as number | null)
 
 const LABELS: Record<MoodKind, string> = {
   idle: 'chilling',
@@ -57,12 +61,13 @@ export const register: Register = on => {
   // The band's id, learned when it first draws; the timer repaints it in place.
   let bandId: string | undefined
   let tick = 0
+  let hasWarned = false
 
   on('session.start', async ($, e, next) => {
     await setMood($, 'idle')
     await $.command.register({
       name: 'pet',
-      description: 'Preview a pet mood: /pet <mood> [seconds]. No mood lists them.',
+      description: 'Preview a pet mood: /pet <mood> [seconds], or /pet context <percent>. No mood lists them.',
     })
     $.clock.every(FRAME_MS, () => {
       void (async () => {
@@ -77,7 +82,8 @@ export const register: Register = on => {
           current = await read($, mood)
         }
         if (bandId !== undefined) {
-          await $.ui.blit({ requestId: bandId, key: 'pet', cells: encode(drawFrame(current.kind, tick)) })
+          const cells = encode(drawFrame(current.kind, tick, (await read($, context)) ?? 0))
+          await $.ui.blit({ requestId: bandId, key: 'pet', cells })
         }
       })()
     })
@@ -85,16 +91,34 @@ export const register: Register = on => {
   })
 
   on('command.run', { command: 'pet' }, async ($, e) => {
-    const [typed = '', secs = '10'] = e.args.trim().split(/\s+/)
+    const [typed = '', value = ''] = e.args.trim().split(/\s+/)
+    if (typed === 'context') {
+      const percent = Math.min(100, Math.max(0, Number(value) || 0))
+      await update($, context, () => percent)
+      return { text: `Context set to ${percent}% until the next measure.` }
+    }
     const name = typed === 'helper' ? 'subagent' : typed
     const kinds = Object.keys(LABELS) as MoodKind[]
     if (!kinds.includes(name as MoodKind)) {
       const list = kinds.map(k => (k === 'subagent' ? 'subagent (or helper)' : k)).join(', ')
-      return { text: `Moods: ${list}. Usage: /pet <mood> [seconds]` }
+      return { text: `Moods: ${list}. Usage: /pet <mood> [seconds], or /pet context <percent>` }
     }
-    const seconds = Math.max(1, Number(secs) || 10)
+    const seconds = Math.max(1, Number(value) || 10)
     await setMood($, name as MoodKind, 'preview', seconds * 1000)
     return { text: `Showing ${name} for ${seconds}s.` }
+  })
+
+  // Context fill: Clawd's battery drains, and one toast when it passes CONTEXT_WARN.
+  on('session.measure', async ($, e, next) => {
+    const percent = e.context.percent ?? null
+    await update($, context, () => percent)
+    if (percent !== null && percent >= CONTEXT_WARN && !hasWarned) {
+      hasWarned = true
+      $.ui.toast(`Clawd is getting tired: context is ${percent}% full. Run /compact soon.`)
+    } else if (percent !== null && percent < CONTEXT_WARN) {
+      hasWarned = false
+    }
+    return next(e)
   })
 
   on('turn.start', async ($, e, next) => {
@@ -132,14 +156,17 @@ export const register: Register = on => {
 
     bandId = e.requestId
     const current = await read($, mood)
+    const percent = (await read($, context)) ?? 0
     const { Box, Raster, Text } = $.ui.resolve(e)
+    const contextColor = percent >= CONTEXT_WARN ? 'red' : percent >= 65 ? 'yellow' : 'green'
 
     return (
       <Box flexDirection="row" alignItems="center" marginTop={1}>
-        <Raster key="pet" columns={COLUMNS} rows={ROWS} cells={encode(drawFrame(current.kind, tick))} />
+        <Raster key="pet" columns={COLUMNS} rows={ROWS} cells={encode(drawFrame(current.kind, tick, percent))} />
         <Box flexDirection="column" marginLeft={1}>
           <Text bold>{LABELS[current.kind]}</Text>
           {current.detail ? <Text dimColor>{current.detail}</Text> : null}
+          {percent >= CONTEXT_SHOW ? <Text color={contextColor}>context {percent}%</Text> : null}
         </Box>
       </Box>
     )
