@@ -219,7 +219,9 @@ export function drawFrame(kind: MoodKind, tick: number, context = 0, hour = 12):
   const breath = tick % 8 >= 4
   // Night, midnight to 6 a.m.: Clawd wears a nightcap in every mood.
   const pet = (pose: Pose) => drawPet(canvas, { ...pose, cap: hour < 6 })
-  switch (kind) {
+  // A commit cheers with the turn-done art; only its label differs.
+  const art = kind === 'committed' ? 'happy' : kind
+  switch (art) {
     case 'idle': {
       const cycle = tick % 40
       const look = cycle >= 20 && cycle < 26 ? -2 : cycle >= 28 && cycle < 34 ? 2 : 0
@@ -254,7 +256,7 @@ export function drawFrame(kind: MoodKind, tick: number, context = 0, hour = 12):
       // reading, editing, searching, running, web: busy little steps
       pet({ lift: odd ? 2 : 0, step: odd, look: 2 })
   }
-  drawProp(canvas, kind, tick)
+  drawProp(canvas, art, tick)
   if ((kind === 'idle' || kind === 'sleeping') && context >= 50) drawBattery(canvas, context, kind === 'sleeping' ? 8 : 6)
   // Morning, 6 to 11 a.m.: coffee beside an idle Clawd, unless the battery is there.
   else if (kind === 'idle' && hour >= 6 && hour < 11) drawCoffee(canvas, tick)
