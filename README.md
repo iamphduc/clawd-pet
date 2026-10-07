@@ -20,6 +20,7 @@ This is an unofficial fan project, not affiliated with or endorsed by Anthropic.
 | Waiting for you | Waves beside a "?" bubble while Claude asks you a question or a permission prompt is open. After you approve a long command, Clawd goes back to work once the command starts running. | <img src="docs/moods/waiting.png" alt="Clawd waving" width="248"> |
 | Running tests or a build that passes | Hops with happy eyes beside a green check. | <img src="docs/moods/passed.png" alt="Clawd after passing checks" width="248"> |
 | Running tests or a build that fails | Squashes down with closed eyes beside a red X. | <img src="docs/moods/failed.png" alt="Clawd after failing checks" width="248"> |
+| Making a git commit | Cheers with "committed!" and the commit message. | <img src="docs/moods/happy.png" alt="Clawd cheering a commit" width="248"> |
 | Done with a turn | Jumps with happy eyes and sparkles. | <img src="docs/moods/happy.png" alt="Clawd cheering" width="248"> |
 | Hitting an error | Shows X eyes, a sweat drop, and a red "!". | <img src="docs/moods/error.png" alt="Clawd after an error" width="248"> |
 

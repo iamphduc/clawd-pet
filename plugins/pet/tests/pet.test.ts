@@ -2,10 +2,10 @@ import { describe, expect, mock, test } from 'claude-code/testing'
 import type { TestBody } from 'claude-code/testing'
 
 import type { MoodKind } from '../types'
-import { checkPassed, detailForTool, isCheckCommand, moodForTool } from '../hooks/register'
+import { checkPassed, commitMessage, detailForTool, isCheckCommand, isCommitCommand, moodForTool } from '../hooks/register'
 import { COLUMNS, ROWS, drawFrame, encode } from '../hooks/sprites'
 
-const KINDS: MoodKind[] = ['idle', 'sleeping', 'thinking', 'reading', 'editing', 'searching', 'running', 'web', 'subagent', 'waiting', 'passed', 'failed', 'happy', 'error']
+const KINDS: MoodKind[] = ['idle', 'sleeping', 'thinking', 'reading', 'editing', 'searching', 'running', 'web', 'subagent', 'waiting', 'passed', 'failed', 'happy', 'error', 'committed']
 
 test('every mood draws a full raster on every tick', async () => {
   for (const kind of KINDS) {
@@ -114,6 +114,44 @@ test('a passing test run makes the pet cheer', async ($, on) => {
   await $.tool.call({ tool: 'Bash', command: 'npm test' })
 
   expect(await band.find({ text: 'checks passed!' })).toBeDefined()
+})
+
+test('commit commands are told apart from ones that only mention git commit', async () => {
+  expect(isCommitCommand('git commit -m "feat: add x"')).toBe(true)
+  expect(isCommitCommand('cd /repo && git add . && git commit -q -m "fix: y"')).toBe(true)
+  expect(isCommitCommand('git -C ../app commit --amend --no-edit')).toBe(true)
+  expect(isCommitCommand('git log --grep "git commit"')).toBe(false)
+  expect(isCommitCommand('git commit-tree abc')).toBe(false)
+})
+
+test('the commit message is the first line of -m, short', async () => {
+  expect(commitMessage('git commit -m "feat: add x"')).toBe('feat: add x')
+  expect(commitMessage("git commit -m 'fix: y'")).toBe('fix: y')
+  expect(commitMessage('git commit --amend --no-edit')).toBe('')
+  expect(commitMessage(`git commit -m "$(cat <<'EOF'\nfeat: show clearer details\n\nBody text.\nEOF\n)"`)).toBe('feat: show clearer details')
+  expect(commitMessage('git commit -m "docs: a very long message that goes on and on"').length).toBe(30)
+})
+
+test('a commit makes the pet cheer with its message', async ($, on) => {
+  mock.clock(on)
+  on('tool.call', async () => ({ result: 'ok', text: '[main abc123] feat: add x' }))
+  const band = await $.ui.mount(BAND)
+
+  await $.tool.call({ tool: 'Bash', command: 'git add . && git commit -m "feat: add x"' })
+
+  expect(await band.find({ text: 'committed!' })).toBeDefined()
+  expect(await band.find({ text: 'feat: add x' })).toBeDefined()
+})
+
+test('a failed commit is an error, not a cheer', async ($, on) => {
+  mock.clock(on)
+  on('tool.call', async () => ({ result: 'error', isError: true, text: 'nothing to commit' }))
+  const band = await $.ui.mount(BAND)
+
+  await $.tool.call({ tool: 'Bash', command: 'git commit -m "feat: add x"' })
+
+  expect(await band.find({ text: 'committed!' })).toBeUndefined()
+  expect(await band.find({ text: 'oops' })).toBeDefined()
 })
 
 test('a failing test run makes the pet droop', async ($, on) => {

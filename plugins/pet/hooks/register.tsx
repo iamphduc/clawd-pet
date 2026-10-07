@@ -36,6 +36,7 @@ const LABELS: Record<MoodKind, string> = {
   waiting: 'needs you',
   passed: 'checks passed!',
   failed: 'checks failed',
+  committed: 'committed!',
   happy: 'done!',
   error: 'oops',
 }
@@ -60,8 +61,27 @@ export function detailForTool(input: Record<string, unknown>): string {
   if (path) return path.split(/[\\/]/).pop() ?? ''
   // A command's own description ("Run the tests") says more than its first characters.
   const command = pick('command').replace(/^(cd\s+\S+\s*&&\s*)+/, '')
-  const text = pick('pattern') || pick('description') || command || pick('query') || pick('url')
+  return clip(pick('pattern') || pick('description') || command || pick('query') || pick('url'))
+}
+
+function clip(text: string): string {
   return text.length > DETAIL_MAX ? text.slice(0, DETAIL_MAX - 1) + '…' : text
+}
+
+/** Whether a shell command makes a git commit, in any of its steps. */
+export function isCommitCommand(command: string): boolean {
+  return command.split(/&&|\|\||;|\|/).some(step => /^git( -C \S+)? commit(\s|$)/.test(step.trim()))
+}
+
+/**
+ * The first line of a commit's message from its `-m`, short; '' without one.
+ * A heredoc message (`-m "$(cat <<'EOF' ... EOF)"`) gives its first line of text.
+ */
+export function commitMessage(command: string): string {
+  const match = command.match(/(?:-m|--message)[ =](?:"((?:[^"\\]|\\.)*)"|'([^']*)'|(\S+))/)
+  let message = match?.[1] ?? match?.[2] ?? match?.[3] ?? ''
+  if (message.includes('<<')) message = message.split('\n').slice(1).find(line => line.trim()) ?? ''
+  return clip((message.split('\n')[0] ?? '').trim())
 }
 
 // A shell step that runs tests, a build, a type check, or a linter: the tool
@@ -241,7 +261,10 @@ export const register: Register = on => {
     const result = await next(e)
     beforePrompt = undefined
     const command = typeof input.command === 'string' ? input.command : ''
-    if (moodForTool(tool) === 'running' && result.deny === undefined && isCheckCommand(command)) {
+    const isRan = moodForTool(tool) === 'running' && result.deny === undefined
+    if (isRan && result.isError !== true && isCommitCommand(command)) {
+      await setMood($, 'committed', commitMessage(command) || 'git commit', SHORT_MOOD_MS, 'thinking')
+    } else if (isRan && isCheckCommand(command)) {
       const passed = checkPassed(result.isError === true, typeof result.text === 'string' ? result.text : '')
       await setMood($, passed ? 'passed' : 'failed', detailForTool(input), SHORT_MOOD_MS, 'thinking')
     } else if (result.isError || result.deny !== undefined) {
@@ -255,8 +278,8 @@ export const register: Register = on => {
   on('turn.complete', async ($, e, next) => {
     if (e.agentId === undefined) {
       const current = await read($, mood)
-      // A check result that ends the turn stays up instead of the cheer, for its full time.
-      if (current.kind === 'passed' || current.kind === 'failed') {
+      // A check or commit that ends the turn stays up instead of the cheer, for its full time.
+      if (current.kind === 'passed' || current.kind === 'failed' || current.kind === 'committed') {
         await setMood($, current.kind, current.detail, SHORT_MOOD_MS)
       } else if (e.reason === 'answer') await setMood($, 'happy', '', SHORT_MOOD_MS)
       else if (e.reason === 'aborted') await setMood($, 'idle')

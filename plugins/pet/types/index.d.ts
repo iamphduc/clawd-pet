@@ -13,6 +13,7 @@ export type MoodKind =
   | 'failed'
   | 'happy'
   | 'error'
+  | 'committed'
 
 export type Mood = {
   kind: MoodKind
