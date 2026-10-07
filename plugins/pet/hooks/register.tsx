@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { Mood, MoodKind } from '../types'
+import type { Mood, MoodKind, RateLimit } from '../types'
 import { COLUMNS, ROWS, drawFrame, encode } from './sprites'
 
 const FRAME_MS = 250
@@ -10,6 +10,8 @@ const SHORT_MOOD_MS = 3_000
 // Context use, in percent, at which Clawd shows its battery and then warns.
 const CONTEXT_SHOW = 50
 const CONTEXT_WARN = 80
+// Plan usage, in percent of a rate-limit window, at which Clawd warns once.
+const LIMIT_WARN = 90
 
 const mood = atom({ plugin: 'pet', key: 'mood' } as const, {
   kind: 'idle',
@@ -22,6 +24,8 @@ const context = atom({ plugin: 'pet', key: 'context' } as const, null as number 
 // Kept in $.state, not the module, so a reload doesn't show the toast again.
 const hasWarned = atom({ plugin: 'pet', key: 'hasWarned' } as const, false)
 const isOff = atom({ plugin: 'pet', key: 'isOff' } as const, false)
+const limits = atom({ plugin: 'pet', key: 'limits' } as const, [] as RateLimit[])
+const limitsWarned = atom({ plugin: 'pet', key: 'limitsWarned' } as const, [] as string[])
 
 const LABELS: Record<MoodKind, string> = {
   idle: 'chilling',
@@ -37,6 +41,7 @@ const LABELS: Record<MoodKind, string> = {
   passed: 'checks passed!',
   failed: 'checks failed',
   committed: 'committed!',
+  resting: 'resting',
   happy: 'done!',
   error: 'oops',
 }
@@ -116,9 +121,29 @@ let lastKind: MoodKind = 'idle'
 // Mirrors the isOff state for the frame timer, which skips all work while Clawd is off.
 let isOffNow = false
 
+/** Whether a mood is a sleeping Clawd, which moves at a quarter speed. */
+function isAsleep(kind: MoodKind): boolean {
+  return kind === 'sleeping' || kind === 'resting'
+}
+
 /** The animation step for a frame: a sleeping Clawd moves at a quarter speed. */
 function frameTick(kind: MoodKind, tick: number): number {
-  return kind === 'sleeping' ? Math.floor(tick / 4) : tick
+  return isAsleep(kind) ? Math.floor(tick / 4) : tick
+}
+
+const LIMIT_NAMES: Record<string, string> = { five_hour: '5-hour', seven_day: 'weekly' }
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+/** A reset time, short and local: "3:40 PM" today, "Mon 3:40 PM" on another day. */
+export function formatReset(at: Date, now: Date): string {
+  const hours = at.getHours() % 12 || 12
+  const time = `${hours}:${String(at.getMinutes()).padStart(2, '0')} ${at.getHours() < 12 ? 'AM' : 'PM'}`
+  return at.toDateString() === now.toDateString() ? time : `${DAYS[at.getDay()]} ${time}`
+}
+
+/** The window that stopped Claude: the fullest one, or none before the first reading. */
+export function fullestLimit(windows: RateLimit[]): RateLimit | undefined {
+  return [...windows].sort((a, b) => b.percentUsed - a.percentUsed)[0]
 }
 
 // `/pet demo`: every mood in turn, like a short day of work.
@@ -172,7 +197,7 @@ export const register: Register = on => {
         // Nothing to paint until the band has drawn once (never, on the desktop),
         // and a sleeping Clawd paints once a second.
         if (bandId === undefined || isOffNow) return
-        if (lastKind === 'sleeping' && tick % 4 !== 0) return
+        if (isAsleep(lastKind) && tick % 4 !== 0) return
         let current = await read($, mood)
         const now = await $.clock.now()
         if (current.until && now > current.until) {
@@ -242,6 +267,29 @@ export const register: Register = on => {
     } else if (percent !== null && percent < CONTEXT_WARN) {
       await update($, hasWarned, () => false)
     }
+    // Plan usage: one toast per window each time it climbs past LIMIT_WARN.
+    const windows = e.rateLimits.map(({ kind, percentUsed, resetsAt }) => ({ kind, percentUsed, resetsAt }))
+    await update($, limits, () => windows)
+    const warned = await read($, limitsWarned)
+    const now = new Date(await $.clock.now())
+    for (const w of windows) {
+      if (w.percentUsed < LIMIT_WARN || warned.includes(w.kind)) continue
+      const resets = w.resetsAt ? `, resets ${formatReset(new Date(w.resetsAt), now)}` : ''
+      $.ui.toast(`Clawd is running low: ${Math.floor(w.percentUsed)}% of your ${LIMIT_NAMES[w.kind] ?? w.kind} limit used${resets}.`)
+    }
+    await update($, limitsWarned, () => windows.filter(w => w.percentUsed >= LIMIT_WARN).map(w => w.kind))
+    return next(e)
+  })
+
+  // A turn stopped by the plan's limit: Clawd rests until the window resets.
+  on('classic.StopFailure', async ($, e, next) => {
+    if (e.agent_id === undefined && e.error === 'rate_limit') {
+      const now = await $.clock.now()
+      const resetsAt = fullestLimit(await read($, limits))?.resetsAt
+      const at = resetsAt ? Date.parse(resetsAt) : NaN
+      if (at > now) await setMood($, 'resting', `until ${formatReset(new Date(at), new Date(now))}`, at - now)
+      else await setMood($, 'resting')
+    }
     return next(e)
   })
 
@@ -297,8 +345,10 @@ export const register: Register = on => {
   on('turn.complete', async ($, e, next) => {
     if (e.agentId === undefined) {
       const current = await read($, mood)
-      // A check or commit that ends the turn stays up instead of the cheer, for its full time.
-      if (current.kind === 'passed' || current.kind === 'failed' || current.kind === 'committed') {
+      if (current.kind === 'resting') {
+        // Stopped by the plan's limit: Clawd keeps resting.
+      } else if (current.kind === 'passed' || current.kind === 'failed' || current.kind === 'committed') {
+        // A check or commit that ends the turn stays up instead of the cheer, for its full time.
         await setMood($, current.kind, current.detail, SHORT_MOOD_MS)
       } else if (e.reason === 'answer') await setMood($, 'happy', '', SHORT_MOOD_MS)
       else if (e.reason === 'aborted') await setMood($, 'idle')
