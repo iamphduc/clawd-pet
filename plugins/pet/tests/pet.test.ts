@@ -154,7 +154,7 @@ test('after a prompt is approved, Clawd stops waving once the tool runs', async 
   })
   on('session.start', async () => ({ cwd: '/repo' }))
   on('command.register', async () => ({ value: {} }) as never)
-  on('ui.blit', async () => ({}) as never)
+  on('ui.blit', async () => ({ value: {} }) as never)
   const band = await $.ui.mount(BAND)
   // Starts the frame timer, which makes the switch.
   await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
@@ -179,7 +179,7 @@ describe('the frame timer', () => {
     const blits: string[] = []
     on('session.start', async () => ({ cwd: '/repo' }))
     on('command.register', async () => ({ value: {} }) as never)
-    on('ui.blit', async ($, e) => (blits.push('cells' in e ? e.cells : ''), {}) as never)
+    on('ui.blit', async ($, e) => (blits.push('cells' in e ? e.cells : ''), { value: {} }) as never)
     on('tool.call', async () => ({ result: 'ok', text: 'Tests: 1 failed' }))
     await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
     return { clock, blits }
@@ -216,7 +216,7 @@ test('the context toast shows once per climb past 80%', async ($, on) => {
   mock.clock(on)
   const toasts: string[] = []
   on('session.measure', async () => ({ changed: ['context'] }) as never)
-  on('ui.toast', async ($, e) => (toasts.push(String(e.text)), {}) as never)
+  on('ui.toast', async ($, e) => (toasts.push(String(e.text)), { value: undefined }) as never)
   const measure = (percent: number) =>
     $.session.measure({ context: { tokens: percent * 2000, window: 200_000, percent }, rateLimits: [], changed: ['context'] } as never)
 
