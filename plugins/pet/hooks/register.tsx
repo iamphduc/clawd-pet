@@ -51,12 +51,17 @@ export function moodForTool(tool: string): MoodKind {
   return 'thinking'
 }
 
+// Long enough for a file name or a short description, short enough to keep the band calm.
+const DETAIL_MAX = 30
+
 export function detailForTool(input: Record<string, unknown>): string {
   const pick = (key: string) => (typeof input[key] === 'string' ? (input[key] as string) : '')
   const path = pick('file_path') || pick('notebook_path')
   if (path) return path.split(/[\\/]/).pop() ?? ''
-  const text = pick('pattern') || pick('command') || pick('query') || pick('url') || pick('description')
-  return text.length > 40 ? text.slice(0, 39) + '…' : text
+  // A command's own description ("Run the tests") says more than its first characters.
+  const command = pick('command').replace(/^(cd\s+\S+\s*&&\s*)+/, '')
+  const text = pick('pattern') || pick('description') || command || pick('query') || pick('url')
+  return text.length > DETAIL_MAX ? text.slice(0, DETAIL_MAX - 1) + '…' : text
 }
 
 // A shell step that runs tests, a build, a type check, or a linter: the tool
@@ -207,7 +212,8 @@ export const register: Register = on => {
       const current = await read($, mood)
       beforePrompt = { kind: current.kind, detail: current.detail }
       isApprovedRunning = false
-      await setMood($, 'waiting', e.tool_name)
+      const input = typeof e.tool_input === 'object' && e.tool_input !== null ? (e.tool_input as Record<string, unknown>) : {}
+      await setMood($, 'waiting', detailForTool(input) || e.tool_name)
     }
     return next(e)
   })
@@ -277,7 +283,11 @@ export const register: Register = on => {
         <Raster key="pet" columns={COLUMNS} rows={ROWS} cells={cells} />
         <Box flexDirection="column" marginLeft={1}>
           <Text bold>{LABELS[current.kind]}</Text>
-          {current.detail ? <Text dimColor>{current.detail}</Text> : null}
+          {current.detail ? (
+            <Text dimColor wrap="truncate-end">
+              {current.detail}
+            </Text>
+          ) : null}
           {percent >= CONTEXT_SHOW ? <Text color={contextColor}>context {percent}%</Text> : null}
         </Box>
       </Box>

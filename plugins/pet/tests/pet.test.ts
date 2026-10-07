@@ -26,6 +26,10 @@ test('tools map to moods and short details', async () => {
   expect(moodForTool('Agent')).toBe('subagent')
   expect(moodForTool('mcp__x__y')).toBe('thinking')
   expect(detailForTool({ file_path: 'C:\\src\\app.ts' })).toBe('app.ts')
+  expect(detailForTool({ command: 'cd /repo/app && npm test', description: 'Run the unit tests' })).toBe('Run the unit tests')
+  expect(detailForTool({ description: 'Run the full plugin test suite now' })).toBe('Run the full plugin test suit…')
+  expect(detailForTool({ command: 'cd /repo/app && cd web && npm test' })).toBe('npm test')
+  expect(detailForTool({ command: 'x'.repeat(200) }).length).toBe(30)
 })
 
 const BAND = {
