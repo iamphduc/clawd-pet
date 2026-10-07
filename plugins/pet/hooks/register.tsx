@@ -121,10 +121,24 @@ function frameTick(kind: MoodKind, tick: number): number {
   return kind === 'sleeping' ? Math.floor(tick / 4) : tick
 }
 
+// `/pet demo`: every mood in turn, like a short day of work.
+const DEMO_MS = 2_000
+const DEMO_ORDER: MoodKind[] = ['idle', 'thinking', 'reading', 'editing', 'searching', 'running', 'web', 'subagent', 'waiting', 'passed', 'failed', 'committed', 'happy', 'error', 'sleeping']
+// The demo's moods still to show; any other mood change ends the demo.
+let demoQueue: MoodKind[] = []
+
 async function setMood($: EngineInterface, kind: MoodKind, detail = '', forMs = 0, then: MoodKind = 'idle') {
+  demoQueue = []
   lastKind = kind
   const now = await $.clock.now()
   await update($, mood, () => ({ kind, detail, since: now, until: forMs ? now + forMs : 0, then }))
+}
+
+async function nextDemoMood($: EngineInterface) {
+  const [kind = 'idle', ...rest] = demoQueue
+  const step = DEMO_ORDER.length - rest.length
+  await setMood($, kind, `demo ${step}/${DEMO_ORDER.length}`, DEMO_MS)
+  demoQueue = rest
 }
 
 export const register: Register = on => {
@@ -150,7 +164,7 @@ export const register: Register = on => {
     await update($, isOff, () => isOffNow)
     await $.command.register({
       name: 'pet',
-      description: 'Preview a pet mood: /pet <mood> [seconds], /pet context <percent>, /pet hour <0-23>, or /pet off | on. No mood lists them.',
+      description: 'Preview a pet mood: /pet <mood> [seconds], /pet demo, /pet context <percent>, /pet hour <0-23>, or /pet off | on. No mood lists them.',
     })
     $.clock.every(FRAME_MS, () => {
       void (async () => {
@@ -162,7 +176,7 @@ export const register: Register = on => {
         let current = await read($, mood)
         const now = await $.clock.now()
         if (current.until && now > current.until) {
-          await setMood($, current.then)
+          await (demoQueue.length > 0 ? nextDemoMood($) : setMood($, current.then))
           current = await read($, mood)
         } else if (current.kind === 'waiting' && isApprovedRunning && beforePrompt !== undefined) {
           await setMood($, beforePrompt.kind, beforePrompt.detail)
@@ -197,6 +211,11 @@ export const register: Register = on => {
       fakeHourUntil = (await $.clock.now()) + 10_000
       return { text: `Pretending it's ${fakeHour}:00 for 10s.` }
     }
+    if (typed === 'demo') {
+      demoQueue = [...DEMO_ORDER]
+      await nextDemoMood($)
+      return { text: `Playing all ${DEMO_ORDER.length} moods, ${DEMO_MS / 1000}s each.` }
+    }
     if (typed === 'context') {
       const percent = Math.min(100, Math.max(0, Number(value) || 0))
       await update($, context, () => percent)
@@ -206,7 +225,7 @@ export const register: Register = on => {
     const kinds = Object.keys(LABELS) as MoodKind[]
     if (!kinds.includes(name as MoodKind)) {
       const list = kinds.map(k => (k === 'subagent' ? 'subagent (or helper)' : k)).join(', ')
-      return { text: `Moods: ${list}. Usage: /pet <mood> [seconds], /pet context <percent>, /pet hour <0-23>, or /pet off | on` }
+      return { text: `Moods: ${list}. Usage: /pet <mood> [seconds], /pet demo, /pet context <percent>, /pet hour <0-23>, or /pet off | on` }
     }
     const seconds = Math.max(1, Number(value) || 10)
     await setMood($, name as MoodKind, 'preview', seconds * 1000)

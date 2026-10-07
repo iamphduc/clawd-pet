@@ -91,6 +91,8 @@ Clawd reacts on its own. To preview a mood, run `/pet <mood> [seconds]`:
 
 `/pet` with no mood lists them all.
 
+To watch every mood in turn, run `/pet demo`. Each mood shows for 2 seconds. When Claude starts working, the demo stops.
+
 To preview the battery, set a fake context fill with `/pet context <percent>`, such as `/pet context 72`. Your next prompt replaces it with the real value.
 
 To preview the time of day, fake the hour for 10 seconds with `/pet hour <0-23>`, such as `/pet hour 8`.

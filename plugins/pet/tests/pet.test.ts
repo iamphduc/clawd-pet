@@ -292,3 +292,27 @@ test('/pet off hides Clawd and remembers it; /pet on brings it back', async ($, 
   await pet('on')
   expect(await band.find({ type: 'Text', text: 'chilling' })).toBeDefined()
 })
+
+test('/pet demo plays every mood in turn, and a real mood ends it', async ($, on) => {
+  const clock = mock.clock(on)
+  on('session.start', async () => ({ cwd: '/repo' }))
+  on('command.register', async () => ({ value: {} }) as never)
+  on('ui.blit', async () => ({ value: {} }) as never)
+  on('tool.call', async () => ({ result: 'ok' }))
+  await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
+  const band = await $.ui.mount(BAND)
+  const pet = (args: string) =>
+    $.command.run({ command: 'pet', args, origin: { kind: 'user' }, presentation: {} } as never)
+
+  await pet('demo')
+  expect(await band.find({ type: 'Text', text: 'chilling' })).toBeDefined()
+  expect(await band.find({ type: 'Text', text: 'demo 1/15' })).toBeDefined()
+  await clock.advance(2_250)
+  expect(await band.find({ type: 'Text', text: 'thinking' })).toBeDefined()
+  expect(await band.find({ type: 'Text', text: 'demo 2/15' })).toBeDefined()
+
+  // Claude starts working: the demo stops for good.
+  await $.tool.call({ tool: 'Read', file_path: '/repo/a.ts' })
+  await clock.advance(10_000)
+  expect(await band.find({ type: 'Text', text: /^demo / })).toBeUndefined()
+})
