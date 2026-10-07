@@ -23,6 +23,7 @@ This is an unofficial fan project, not affiliated with or endorsed by Anthropic.
 | Making a git commit | Cheers with "committed!" and the commit message. | <img src="docs/moods/happy.png" alt="Clawd cheering a commit" width="248"> |
 | Done with a turn | Jumps with happy eyes and sparkles. | <img src="docs/moods/happy.png" alt="Clawd cheering" width="248"> |
 | Hitting an error | Shows X eyes, a sweat drop, and a red "!". | <img src="docs/moods/error.png" alt="Clawd after an error" width="248"> |
+| Stopped by your plan's usage limit | Sleeps, with "resting" and the time the limit resets. | <img src="docs/moods/sleeping.png" alt="Clawd resting" width="248"> |
 
 ## Time of day
 
@@ -55,6 +56,15 @@ Clawd shows how full the context window is, so you know when to run `/compact`.
 - The battery and the line go away when the context drops below 50%, for example after `/compact`.
 
 Claude Code measures the context after each turn, so a new or just-compacted session shows nothing until its next turn ends.
+
+## Plan usage limits
+
+On a Claude subscription, Clawd watches your 5-hour and weekly usage limits:
+
+- When a limit passes 90%, a toast tells you once, with the time it resets.
+- When a limit stops Claude mid-task, Clawd sleeps with "resting" and the reset time, such as `until 3:40 PM`. Clawd wakes up when the limit resets, or when you send a new prompt.
+
+With an API key, Claude Code reports no limits, and Clawd shows neither.
 
 ## Requirements
 

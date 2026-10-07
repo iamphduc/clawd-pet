@@ -2,10 +2,10 @@ import { describe, expect, mock, test } from 'claude-code/testing'
 import type { TestBody } from 'claude-code/testing'
 
 import type { MoodKind } from '../types'
-import { checkPassed, commitMessage, detailForTool, isCheckCommand, isCommitCommand, moodForTool } from '../hooks/register'
+import { checkPassed, commitMessage, detailForTool, formatReset, fullestLimit, isCheckCommand, isCommitCommand, moodForTool } from '../hooks/register'
 import { COLUMNS, ROWS, drawFrame, encode } from '../hooks/sprites'
 
-const KINDS: MoodKind[] = ['idle', 'sleeping', 'thinking', 'reading', 'editing', 'searching', 'running', 'web', 'subagent', 'waiting', 'passed', 'failed', 'happy', 'error', 'committed']
+const KINDS: MoodKind[] = ['idle', 'sleeping', 'thinking', 'reading', 'editing', 'searching', 'running', 'web', 'subagent', 'waiting', 'passed', 'failed', 'happy', 'error', 'committed', 'resting']
 
 test('every mood draws a full raster on every tick', async () => {
   for (const kind of KINDS) {
@@ -315,4 +315,62 @@ test('/pet demo plays every mood in turn, and a real mood ends it', async ($, on
   await $.tool.call({ tool: 'Read', file_path: '/repo/a.ts' })
   await clock.advance(10_000)
   expect(await band.find({ type: 'Text', text: /^demo / })).toBeUndefined()
+})
+
+test('reset times read short and local', async () => {
+  const now = new Date(2026, 9, 7, 9, 0)
+  expect(formatReset(new Date(2026, 9, 7, 15, 40), now)).toBe('3:40 PM')
+  expect(formatReset(new Date(2026, 9, 7, 0, 5), now)).toBe('12:05 AM')
+  expect(formatReset(new Date(2026, 9, 12, 8, 0), now)).toBe('Mon 8:00 AM')
+  expect(fullestLimit([{ kind: 'five_hour', percentUsed: 40 }, { kind: 'seven_day', percentUsed: 100 }])?.kind).toBe('seven_day')
+  expect(fullestLimit([])).toBeUndefined()
+})
+
+const measureLimits = ($: Parameters<TestBody>[0], percentUsed: number, resetsAt?: string) =>
+  $.session.measure({
+    context: { tokens: 0, window: 200_000, percent: 0 },
+    rateLimits: [{ kind: 'five_hour', percentUsed, resetsAt }],
+    changed: ['rateLimits'],
+  } as never)
+
+test('the plan-limit toast shows once per climb past 90%', async ($, on) => {
+  mock.clock(on)
+  const toasts: string[] = []
+  on('session.measure', async () => ({ changed: ['rateLimits'] }) as never)
+  on('ui.toast', async ($, e) => (toasts.push(String(e.text)), { value: undefined }) as never)
+
+  await measureLimits($, 85)
+  await measureLimits($, 91)
+  await measureLimits($, 95)
+  expect(toasts.length).toBe(1)
+  expect(toasts[0]).toContain('91% of your 5-hour limit used')
+  // The window resets, then climbs again.
+  await measureLimits($, 3)
+  await measureLimits($, 92)
+  expect(toasts.length).toBe(2)
+})
+
+test('a turn stopped by the plan limit makes Clawd rest until the reset', async ($, on) => {
+  const clock = mock.clock(on)
+  on('session.start', async () => ({ cwd: '/repo' }))
+  on('command.register', async () => ({ value: {} }) as never)
+  on('ui.blit', async () => ({ value: {} }) as never)
+  on('session.measure', async () => ({ changed: ['rateLimits'] }) as never)
+  on('ui.toast', async () => ({ value: undefined }) as never)
+  on('classic.StopFailure', async () => ({}))
+  on('turn.complete', async () => ({ text: '' }))
+  await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
+  const band = await $.ui.mount(BAND)
+
+  const now = clock.now()
+  const resetsAt = new Date(now + 20 * 60_000)
+  await measureLimits($, 100, resetsAt.toISOString())
+  await $.classic.StopFailure({ error: 'rate_limit' } as never)
+  await $.turn.complete({ reason: 'error', answer: '', durationMs: 1, isAborted: false, turnId: 't1' })
+
+  expect(await band.find({ type: 'Text', text: 'resting' })).toBeDefined()
+  expect(await band.find({ type: 'Text', text: `until ${formatReset(resetsAt, new Date(now))}` })).toBeDefined()
+  // Once the window resets, Clawd is back.
+  await clock.advance(20 * 60_000 + 1_000)
+  expect(await band.find({ type: 'Text', text: 'resting' })).toBeUndefined()
 })
