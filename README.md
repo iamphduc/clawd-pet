@@ -17,13 +17,23 @@ This is an unofficial fan project, not affiliated with or endorsed by Anthropic.
 | Running a command | Hops beside a terminal with a blinking cursor. | <img src="docs/moods/running.png" alt="Clawd running a command" width="248"> |
 | Browsing the web | Hops beside a turning globe. | <img src="docs/moods/web.png" alt="Clawd browsing" width="248"> |
 | Running a subagent | Brings a small helper Clawd. | <img src="docs/moods/subagent.png" alt="Clawd with a helper" width="248"> |
-| Waiting for you | Waves beside a "?" bubble while Claude asks you a question or a permission prompt is open. After you approve a long command, Clawd goes back to work once the command starts running. | <img src="docs/moods/waiting.png" alt="Clawd waving" width="248"> |
+| Waiting for you | Waves beside a "?" bubble while Claude asks you a question or a permission prompt is open, with what Claude wants to run under "needs you". After you approve a long command, Clawd goes back to work once the command starts running. | <img src="docs/moods/waiting.png" alt="Clawd waving" width="248"> |
 | Running tests or a build that passes | Hops with happy eyes beside a green check. | <img src="docs/moods/passed.png" alt="Clawd after passing checks" width="248"> |
 | Running tests or a build that fails | Squashes down with closed eyes beside a red X. | <img src="docs/moods/failed.png" alt="Clawd after failing checks" width="248"> |
 | Making a git commit | Cheers with "committed!" and the commit message. | <img src="docs/moods/happy.png" alt="Clawd cheering a commit" width="248"> |
 | Done with a turn | Jumps with happy eyes and sparkles. | <img src="docs/moods/happy.png" alt="Clawd cheering" width="248"> |
 | Hitting an error | Shows X eyes, a sweat drop, and a red "!". | <img src="docs/moods/error.png" alt="Clawd after an error" width="248"> |
 | Stopped by your plan's usage limit | Sleeps, with "resting" and the time the limit resets. | <img src="docs/moods/sleeping.png" alt="Clawd resting" width="248"> |
+
+## What Clawd is working on
+
+Under the mood name, a dim line says what Claude is working on:
+
+- The file name, when Claude reads or edits a file, such as `register.tsx`.
+- The search pattern or web query, when Claude searches.
+- A command's own description, when Claude runs a command, such as `Run the unit tests`. Without a description, the command itself, with any leading `cd … &&` left off.
+
+The line is cut at 30 characters to keep the band calm.
 
 ## Time of day
 
@@ -68,7 +78,7 @@ With an API key, Claude Code reports no limits, and Clawd shows neither.
 
 ## Requirements
 
-- Claude Code in the terminal (tested on 2.1.289). The desktop app doesn't draw the pet.
+- Claude Code in the terminal (tested on 2.1.292). The desktop app doesn't draw the pet.
 - A terminal with 24-bit color and a font that has block characters, such as Windows Terminal, iTerm2, kitty, or Ghostty.
 
 ## Install
@@ -107,7 +117,7 @@ To preview the battery, set a fake context fill with `/pet context <percent>`, s
 
 To preview the time of day, fake the hour for 10 seconds with `/pet hour <0-23>`, such as `/pet hour 8`.
 
-To turn Clawd off while you focus, run `/pet off`. Clawd stays off in new sessions too, until you run `/pet on`. The context toast at 80% still shows while Clawd is off.
+To turn Clawd off while you focus, run `/pet off`. Clawd stays off in new sessions too, until you run `/pet on`. The context toast at 80% and the plan-limit toast at 90% still show while Clawd is off.
 
 To collapse the band for now, press `ctrl+x ctrl+a` or click `[-]`.
 
