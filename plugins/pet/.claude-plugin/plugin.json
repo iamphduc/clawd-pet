@@ -1,6 +1,6 @@
 {
   "name": "pet",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "description": "Clawd, the Claude Code mascot, lives above your prompt and acts out what Claude is doing.",
   "author": { "name": "iamphduc" },
   "repository": "https://github.com/iamphduc/clawd-pet",
