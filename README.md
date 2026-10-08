@@ -126,7 +126,7 @@ To collapse the band for now, press `ctrl+x ctrl+a` or click `[-]`.
 The pet is a hooks-module plugin in `plugins/pet`:
 
 - `hooks/register.tsx` turns turn and tool events into moods and draws the band.
-- `hooks/sprites.ts` holds the pixel art. Each terminal cell draws 2 x 2 pixels with quarter-block characters.
+- `hooks/sprites.ts` holds the pixel art. Each terminal cell draws 2 x 2 pixels with quarter-block characters. Before you change the art, read [docs/decisions.md](docs/decisions.md).
 - `tests/pet.test.ts` holds the tests.
 - `scripts/render-moods.mjs` renders the animated mood images in `docs/moods/` from the sprite code. After you change the art, run `node scripts/render-moods.mjs` to update them.
 
