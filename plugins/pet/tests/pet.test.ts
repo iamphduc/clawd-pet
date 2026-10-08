@@ -122,12 +122,14 @@ test('a check that ends beside a running helper returns to the helper', async ($
 test('a new turn forgets calls that never ended', async ($, on) => {
   mock.clock(on)
   on('turn.start', async (_$, e) => ({ turnId: e.turnId }))
+  // Held open past the new turn, then let go so no call outlives the test.
+  let release = () => {}
   on('tool.call', async (_$, e) => {
-    if (String((e as Record<string, unknown>).tool) === 'Agent') await new Promise<void>(() => {})
+    if (String((e as Record<string, unknown>).tool) === 'Agent') await new Promise<void>(resolve => (release = resolve))
     return { result: 'ok' }
   })
   const band = await $.ui.mount(BAND)
-  void $.tool.call({ tool: 'Agent', description: 'stuck', prompt: 'x' } as never)
+  const stuck = $.tool.call({ tool: 'Agent', description: 'stuck', prompt: 'x' } as never)
   await new Promise(resolve => setTimeout(resolve, 0))
 
   await $.turn.start({ text: 'next', turnId: 't2' })
@@ -135,6 +137,9 @@ test('a new turn forgets calls that never ended', async ($, on) => {
 
   expect(await band.find({ text: 'thinking' })).toBeDefined()
   expect(await band.find({ text: 'with a helper' })).toBeUndefined()
+
+  release()
+  await stuck
 })
 
 test('idle and sleeping draw a battery at any context fill', async () => {
