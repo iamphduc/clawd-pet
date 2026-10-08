@@ -211,9 +211,15 @@ function drawProp(canvas: Canvas, kind: MoodKind, tick: number) {
       return
     }
     case 'sleeping': {
-      const rise = tick % 6
-      stamp(canvas, wide(['gggg', '..g.', '.g..', 'gggg']), PX, 4 - rise)
-      stamp(canvas, wide(['ggg', '.g.', 'ggg']), PX + 10, 2 - rise)
+      // Two Zs, half a cycle apart: each starts small by the head, grows as it
+      // drifts up and right, and fades out. They keep a row clear above the battery.
+      const small = ['gggg', '..g.', '.g..', 'gggg']
+      const big = ['ggggg', '...g.', '..g..', '.g...', 'ggggg']
+      const path: [string[], number, number][] = [[small, 0, 3], [small, 1, 2], [big, 2, 2], [big, 4, 1], [big, 6, 0], [big, 7, 0]]
+      for (const phase of [tick % 6, (tick + 3) % 6]) {
+        const [art, x, y] = path[phase] ?? [small, 0, 3]
+        stamp(canvas, wide(phase === 5 ? art.map(line => line.replaceAll('g', 'd')) : art), PX + x * 2, y)
+      }
       return
     }
     case 'happy': {
