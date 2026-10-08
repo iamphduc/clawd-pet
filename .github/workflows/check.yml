@@ -1,0 +1,45 @@
+name: Check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code@2.1.293
+
+      - name: Validate the plugin
+        run: claude plugin validate --strict ./plugins/pet
+
+      - name: Run the tests
+        run: claude plugin test ./plugins/pet
+
+      # The type check needs the plugin API's types, which Claude Code writes
+      # when it loads the plugin. It writes them before it asks for a login,
+      # which CI doesn't have, so the load "fails" after doing its job.
+      - name: Write the plugin API types
+        run: timeout 120 claude -p --plugin-dir ./plugins/pet "hi" < /dev/null || true
+
+      - name: Check the types
+        run: |
+          test -f plugins/pet/.claude-plugin/types/claude-code/index.d.ts
+          npx -y -p typescript@7.0.2 tsc -p ./plugins/pet --noEmit
+
+      - name: Check the mood images match the sprites
+        run: |
+          node scripts/render-moods.mjs
+          git diff --exit-code --stat docs/moods
