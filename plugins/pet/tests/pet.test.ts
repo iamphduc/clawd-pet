@@ -161,10 +161,15 @@ test('the pet waits while a question is open', async ($, on) => {
 })
 
 test('check commands are told apart from commands that only mention them', async () => {
-  for (const command of ['npm test', 'pnpm run build', 'npx vitest run', 'pytest -q', 'cargo test --all', 'tsc -p .', 'cd app && go test ./...', 'claude plugin test ./plugins/pet', 'make']) {
+  for (const command of ['npm test', 'pnpm run build', 'npx vitest run', 'pytest -q', 'cargo test --all', 'tsc -p .', 'cd app && go test ./...', 'claude plugin test ./plugins/pet', 'make',
+    'npx -p typescript tsc -p ./plugins/pet', 'npx -y -p typescript tsc --noEmit', 'npx --package=typescript tsc',
+    'pnpm dlx vitest', 'CI=1 npm test', 'NODE_ENV=test FOO=bar npx jest',
+    'uv run pytest', 'poetry run pytest -x', 'python3 -m pytest', 'py -m pytest']) {
     expect(isCheckCommand(command)).toBe(true)
   }
-  for (const command of ['git status', 'git commit -m "add test"', 'echo build', 'ls tests', 'npm install']) {
+  for (const command of ['git status', 'git commit -m "add test"', 'echo build', 'ls tests', 'npm install',
+    'npx create-react-app tsc-demo', 'npx prettier --write .', 'npx -p typescript tsc-watch',
+    'FOO=1 echo test', 'uv run python app.py']) {
     expect(isCheckCommand(command)).toBe(false)
   }
 })
