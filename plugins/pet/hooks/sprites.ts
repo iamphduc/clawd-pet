@@ -243,10 +243,14 @@ function drawProp(canvas: Canvas, kind: MoodKind, tick: number) {
       stamp(canvas, odd ? small : big, PX + 12, odd ? 7 : 5)
       return
     }
-    case 'error':
-      stamp(canvas, wide(['.c.', 'ccc', 'ccc', '.c.']), 32, (tick % 4) - 1)
+    case 'error': {
+      // A sweat drop beside the head slides down, then a new one forms. It's
+      // drawn in half-width pixels, fine enough to taper to a point.
+      const slide = tick % 4
+      if (slide < 3) stamp(canvas, ['..c..', '.ccc.', 'ccccc', 'ccccc', '.ccc.'], 30, slide)
       stamp(canvas, wide(['rr', 'rr', 'rr', 'rr', '..', 'rr']), PX + 4, 2)
       return
+    }
     case 'subagent':
       // A helper Clawd: the logo at its own size.
       stamp(canvas, [HEAD, FACE, ARMS, HEAD, LEGS[odd ? 1 : 0] ?? ''], PX + 2, odd ? 6 : 7)
