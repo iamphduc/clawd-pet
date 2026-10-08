@@ -271,7 +271,7 @@ function drawProp(canvas: Canvas, kind: MoodKind, tick: number) {
       return
     }
     case 'failed':
-      stamp(canvas, wide(['r...r', '.r.r.', '..r..', '.r.r.', 'r...r']), PX + 2, 3)
+      stamp(canvas, wide(['r.....r', '.r...r.', '..r.r..', '...r...', '..r.r..', '.r...r.', 'r.....r']), PX + 4, 2)
       return
     case 'idle':
       return
