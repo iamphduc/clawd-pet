@@ -141,10 +141,12 @@ Loading the plugin this way also writes the plugin API's types to `plugins/pet/.
 To check your changes:
 
 ```bash
-claude plugin validate ./plugins/pet
+claude plugin validate --strict ./plugins/pet
 claude plugin test ./plugins/pet
-npx -p typescript tsc -p ./plugins/pet
+npx -p typescript@7.0.2 tsc -p ./plugins/pet
 ```
+
+The Check workflow in `.github/workflows/check.yml` runs these on every pull request. It also renders the mood images and fails if they don't match the files in `docs/moods/`. After you change the art, run `node scripts/render-moods.mjs` and commit the images.
 
 ## Uninstall
 
