@@ -109,8 +109,13 @@ const PX = 38
 
 /** A mug of coffee with rising steam. */
 function drawCoffee(canvas: Canvas, tick: number) {
-  const steam = tick % 4 < 2 ? ['.g.g', 'g.g.', '.g.g'] : ['g.g.', '.g.g', 'g.g.']
-  stamp(canvas, wide(steam), PX + 2, 1)
+  // Two wisps of steam rise and sway out of step, fading near the top.
+  const sway = [0, 0, 1, 1]
+  for (let y = 0; y < 5; y++) {
+    const color = y === 0 ? 'd' : 'g'
+    stamp(canvas, wide([color]), PX + 2 + (sway[(y + tick) % 4] ?? 0) * 2, y)
+    stamp(canvas, wide([color]), PX + 8 + (sway[(y + tick + 1) % 4] ?? 0) * 2, y)
+  }
   stamp(canvas, wide(['wwwww..', 'wnnnwww', 'wwwww.w', 'wwwwwww', '.www...']), PX, 5)
 }
 
