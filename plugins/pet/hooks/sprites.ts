@@ -175,10 +175,10 @@ function drawProp(canvas: Canvas, kind: MoodKind, tick: number) {
         'gwccccg..',
         'gcccccg..',
         'gcccccg..',
-        '.gcccgn..',
-        '..gggnn..',
-        '......nn.',
-        '.......nn',
+        '.gcccg...',
+        '..ggg.n..',
+        '.......n.',
+        '........n',
       ]), PX + dx * 2, dy - 1)
       return
     }
