@@ -17,7 +17,7 @@ This is an unofficial fan project, not affiliated with or endorsed by Anthropic.
 | Running a command | Hops beside a terminal with a blinking cursor. | <img src="docs/moods/running.png" alt="Clawd running a command" width="248"> |
 | Browsing the web | Hops beside a browser window as a page loads. | <img src="docs/moods/web.png" alt="Clawd browsing" width="248"> |
 | Running a subagent | Brings a small helper Clawd. | <img src="docs/moods/subagent.png" alt="Clawd with a helper" width="248"> |
-| Waiting for you | Waves beside a "?" bubble while Claude asks you a question or a permission prompt is open, with what Claude wants to run under "needs you". After you approve a long command, Clawd goes back to work once the command starts running. | <img src="docs/moods/waiting.png" alt="Clawd waving" width="248"> |
+| Waiting for you | Waves beside a bouncing "?" while Claude asks you a question or a permission prompt is open, with what Claude wants to run under "needs you". After you approve a long command, Clawd goes back to work once the command starts running. | <img src="docs/moods/waiting.png" alt="Clawd waving" width="248"> |
 | Running tests or a build that passes | Hops with happy eyes as a green check draws itself. | <img src="docs/moods/passed.png" alt="Clawd after passing checks" width="248"> |
 | Running tests or a build that fails | Squashes down with closed eyes beside a red X. | <img src="docs/moods/failed.png" alt="Clawd after failing checks" width="248"> |
 | Making a git commit | Cheers with "committed!" and the commit message. | <img src="docs/moods/happy.png" alt="Clawd cheering a commit" width="248"> |

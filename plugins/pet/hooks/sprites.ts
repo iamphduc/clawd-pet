@@ -260,10 +260,8 @@ function drawProp(canvas: Canvas, kind: MoodKind, tick: number) {
       stamp(canvas, [HEAD, FACE, ARMS, HEAD, LEGS[odd ? 1 : 0] ?? ''], PX + 2, odd ? 6 : 7)
       return
     case 'waiting':
-      stamp(canvas, wide(['.wwwww.', 'wwkkkww', 'wwwwkww', 'wwwkwww', 'wwwwwww', 'wwwkwww', '.wwwww.']), PX + 2, 0)
-      // Two dots trail from the bubble down to Clawd's head.
-      stamp(canvas, ['ww'], 34, 4)
-      stamp(canvas, ['ww'], 37, 3)
+      // A big question mark bounces beside the waving Clawd.
+      stamp(canvas, wide(['.yyyy.', 'yy..yy', '....yy', '...yy.', '..yy..', '......', '..yy..']), PX + 4, odd ? 1 : 3)
       return
     case 'passed': {
       // The check draws itself left to right, then holds.
