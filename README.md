@@ -11,7 +11,7 @@ This is an unofficial fan project, not affiliated with or endorsed by Anthropic.
 | Idle | Breathes, blinks, and looks around. | <img src="docs/moods/idle.png" alt="Clawd idle" width="248"> |
 | Idle for a minute | Falls asleep, with Z's rising. | <img src="docs/moods/sleeping.png" alt="Clawd asleep" width="248"> |
 | Thinking | Looks up beside a thought bubble. | <img src="docs/moods/thinking.png" alt="Clawd thinking" width="248"> |
-| Reading a file | Hops beside a book whose page flips. | <img src="docs/moods/reading.png" alt="Clawd reading" width="248"> |
+| Reading a file | Hops beside a book, eyes moving across the lines, and turns the page. | <img src="docs/moods/reading.png" alt="Clawd reading" width="248"> |
 | Editing a file | Hops while a pencil writes. | <img src="docs/moods/editing.png" alt="Clawd editing" width="248"> |
 | Searching | Hops while a magnifier sweeps. | <img src="docs/moods/searching.png" alt="Clawd searching" width="248"> |
 | Running a command | Hops beside a terminal with a blinking cursor. | <img src="docs/moods/running.png" alt="Clawd running a command" width="248"> |

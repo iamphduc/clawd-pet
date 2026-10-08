@@ -125,11 +125,22 @@ function drawBattery(canvas: Canvas, percent: number, y: number) {
 function drawProp(canvas: Canvas, kind: MoodKind, tick: number) {
   const odd = tick % 2 === 1
   switch (kind) {
-    case 'reading':
-      stamp(canvas, wide(odd
-        ? ['.......tt..', '.tttt.tgtt.', 'tgggtntttt.', 'tttttntggt.', 'tggttnttttt', 'nnnnnnnnnnn']
-        : ['.tttt.tttt.', 'tgggtntgggt', 'tttttnttttt', 'tggttntgggt', 'tttttnttttt', 'nnnnnnnnnnn']), PX, 5)
+    case 'reading': {
+      // An open book. Every 8 ticks a page lifts off the right side, stands
+      // up over the spine, and lands on the left, showing new lines of text.
+      const step = tick % 8
+      const page = Math.floor(tick / 8) % 2 === 0
+      stamp(canvas, wide(page
+        ? ['.tttt.tttt.', 'tgggtntgggt', 'tttttnttttt', 'tggttntgggt', 'tttttnttttt', 'nnnnnnnnnnn']
+        : ['.tttt.tttt.', 'tggttntgggt', 'tttttnttttt', 'tgggtntggtt', 'tttttnttttt', 'nnnnnnnnnnn']), PX, 5)
+      const turning = [
+        ['.........tt', '.......tt..', '......t....'],
+        ['.....t.....', '.....t.....', '.....t.....', '.....t.....'],
+        ['tt.........', '..tt.......', '....t......'],
+      ][step - 5]
+      if (turning) stamp(canvas, wide(turning), PX, 5 - turning.length + 1)
       return
+    }
     case 'editing': {
       // The pencil writes a zigzag line left to right, its tip on the line,
       // then holds a beat before starting over.
@@ -279,8 +290,12 @@ export function drawFrame(kind: MoodKind, tick: number, context = 0, hour = 12):
     case 'subagent':
       pet({ squash: breath, look: 2 })
       break
+    case 'reading':
+      // Eyes glide across a line left to right, then jump back to the next.
+      pet({ lift: odd ? 2 : 0, step: odd, look: [-2, -1, 0, 1, 2, -2, -1, 0][tick % 8] ?? 0 })
+      break
     default:
-      // reading, editing, searching, running, web: busy little steps
+      // editing, searching, running, web: busy little steps
       pet({ lift: odd ? 2 : 0, step: odd, look: 2 })
   }
   drawProp(canvas, art, tick)
