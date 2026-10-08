@@ -93,9 +93,10 @@ export function commitMessage(command: string): string {
 // is the command itself, not a word inside an argument.
 const CHECK_STEPS = [
   /^(npm|pnpm|yarn|bun)( run)? (test|build|lint|typecheck|check)\b/,
-  /^(npx|pnpm exec|bunx) (jest|vitest|tsc|eslint|playwright|mocha)\b/,
+  // Options may come before the tool: `npx -p typescript tsc`, `npx -y jest`.
+  /^(npx|bunx|pnpm (exec|dlx))(\s+-{1,2}[\w=.@/-]+(\s+[^-\s]\S*)?)*\s+(jest|vitest|tsc|eslint|playwright|mocha)(\s|$)/,
   /^(jest|vitest|tsc|eslint|mocha|rspec|phpunit|ctest)\b/,
-  /^(python -m )?pytest\b/,
+  /^((uv|poetry|pipenv) run )?((python3?|py) -m )?pytest\b/,
   /^go (test|build|vet)\b/,
   /^cargo (test|build|check|clippy)\b/,
   /^dotnet (test|build)\b/,
@@ -105,9 +106,12 @@ const CHECK_STEPS = [
 ]
 const FAILED_OUTPUT = /\b[1-9]\d* (fail|failed|failing|failures?|errors?)\b|\bFAIL(ED)?\b|\bBuild failed\b/
 
+// Settings before a command, such as `CI=1 npm test`, aren't the tool.
+const ENV_SETTINGS = /^([A-Za-z_]\w*=\S*\s+)+/
+
 /** Whether a shell command runs tests, a build, a type check, or a linter. */
 export function isCheckCommand(command: string): boolean {
-  return command.split(/&&|\|\||;|\|/).some(step => CHECK_STEPS.some(re => re.test(step.trim())))
+  return command.split(/&&|\|\||;|\|/).some(step => CHECK_STEPS.some(re => re.test(step.trim().replace(ENV_SETTINGS, ''))))
 }
 
 /** Whether a check command's run passed, from its error flag and its output. */
