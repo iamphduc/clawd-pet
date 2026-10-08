@@ -15,7 +15,7 @@ This is an unofficial fan project, not affiliated with or endorsed by Anthropic.
 | Editing a file | Hops while a pencil writes. | <img src="docs/moods/editing.png" alt="Clawd editing" width="248"> |
 | Searching | Hops while a magnifier sweeps. | <img src="docs/moods/searching.png" alt="Clawd searching" width="248"> |
 | Running a command | Hops beside a terminal with a blinking cursor. | <img src="docs/moods/running.png" alt="Clawd running a command" width="248"> |
-| Browsing the web | Hops beside a turning globe. | <img src="docs/moods/web.png" alt="Clawd browsing" width="248"> |
+| Browsing the web | Hops beside a browser window as a page loads. | <img src="docs/moods/web.png" alt="Clawd browsing" width="248"> |
 | Running a subagent | Brings a small helper Clawd. | <img src="docs/moods/subagent.png" alt="Clawd with a helper" width="248"> |
 | Waiting for you | Waves beside a "?" bubble while Claude asks you a question or a permission prompt is open, with what Claude wants to run under "needs you". After you approve a long command, Clawd goes back to work once the command starts running. | <img src="docs/moods/waiting.png" alt="Clawd waving" width="248"> |
 | Running tests or a build that passes | Hops with happy eyes beside a green check. | <img src="docs/moods/passed.png" alt="Clawd after passing checks" width="248"> |

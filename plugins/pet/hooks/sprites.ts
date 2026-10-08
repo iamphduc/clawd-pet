@@ -189,17 +189,26 @@ function drawProp(canvas: Canvas, kind: MoodKind, tick: number) {
       ]), PX, 4)
       return
     case 'web': {
-      const globe: string[] = []
-      for (let y = 0; y < 8; y++) {
-        let line = ''
-        for (let x = 0; x < 8; x++) {
-          const inside = (x - 3.5) ** 2 + (y - 3.5) ** 2 <= 15
-          const land = (x + tick) % 8 < 3 && y > 1 && y < 6
-          line += !inside ? '.' : land ? 'G' : (x + tick) % 4 === 0 ? 'c' : 'B'
-        }
-        globe.push(line)
+      // A browser window: a title bar with three dots and an address bar, and
+      // a page whose heading, then lines of text, fill in as it loads.
+      const shown = (tick % 8) * 3
+      const line = (text: string, from: number) => {
+        const n = Math.max(0, Math.min(shown - from, text.length))
+        return 'gw' + text.slice(0, n) + 'w'.repeat(text.length - n) + 'wg'
       }
-      stamp(canvas, wide(globe), PX + 2, 2)
+      stamp(canvas, wide([
+        'gggggggggggg',
+        'grgygGgwwwwg',
+        'gggggggggggg',
+        'gwwwwwwwwwwg',
+        line('BBBBBwww', 0),
+        'gwwwwwwwwwwg',
+        line('gggggggg', 6),
+        'gwwwwwwwwwwg',
+        line('gggggwww', 12),
+        'gwwwwwwwwwwg',
+        'gggggggggggg',
+      ]), PX, 0)
       return
     }
     case 'thinking': {
