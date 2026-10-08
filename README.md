@@ -13,7 +13,7 @@ This is an unofficial fan project, not affiliated with or endorsed by Anthropic.
 | Thinking | Looks up beside a thought bubble. | <img src="docs/moods/thinking.png" alt="Clawd thinking" width="248"> |
 | Reading a file | Hops beside a book, eyes moving across the lines, and turns the page. | <img src="docs/moods/reading.png" alt="Clawd reading" width="248"> |
 | Editing a file | Hops while a pencil writes. | <img src="docs/moods/editing.png" alt="Clawd editing" width="248"> |
-| Searching | Hops while a magnifier sweeps. | <img src="docs/moods/searching.png" alt="Clawd searching" width="248"> |
+| Searching | Hops while a magnifier circles, as if scanning a page. | <img src="docs/moods/searching.png" alt="Clawd searching" width="248"> |
 | Running a command | Hops beside a rocket as stars stream past it. | <img src="docs/moods/running.png" alt="Clawd running a command" width="248"> |
 | Browsing the web | Hops beside a browser window as a page loads. | <img src="docs/moods/web.png" alt="Clawd browsing" width="248"> |
 | Running a subagent | Brings a small helper Clawd. | <img src="docs/moods/subagent.png" alt="Clawd with a helper" width="248"> |
