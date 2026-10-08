@@ -219,9 +219,10 @@ function drawProp(canvas: Canvas, kind: MoodKind, tick: number) {
     case 'thinking': {
       const dots = Math.floor(tick / 2) % 4
       const inner = [0, 1, 2].map(i => (i < dots ? 'k' : 'w')).join('w')
-      stamp(canvas, wide(['.wwwwwwww.', 'wwwwwwwwww', 'ww' + inner + 'www', 'wwwwwwwwww', '.wwwwwwww.']), PX, 0)
-      stamp(canvas, wide(['ww', 'ww']), PX - 2, 6)
-      stamp(canvas, wide(['w']), PX - 4, 9)
+      stamp(canvas, wide(['.wwwwwwww.', 'wwwwwwwwww', 'ww' + inner + 'www', 'wwwwwwwwww', '.wwwwwwww.']), PX + 2, 0)
+      // Two dots trail from the bubble down to Clawd's head.
+      stamp(canvas, ['ww'], 34, 4)
+      stamp(canvas, ['ww'], 37, 3)
       return
     }
     case 'sleeping': {
