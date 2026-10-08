@@ -262,9 +262,13 @@ function drawProp(canvas: Canvas, kind: MoodKind, tick: number) {
       stamp(canvas, ['ww'], 34, 4)
       stamp(canvas, ['ww'], 37, 3)
       return
-    case 'passed':
-      stamp(canvas, wide(['.....G', '....GG', 'G..GG.', 'GGGG..', '.GG...']), PX + 2, odd ? 2 : 3)
+    case 'passed': {
+      // The check draws itself left to right, then holds.
+      const shown = [2, 4, 6, 9, 9, 9, 9, 9][tick % 8] ?? 9
+      const check = ['.......GG', '......GG.', 'GG...GG..', '.GG.GG...', '..GGG....', '...G.....']
+      stamp(canvas, wide(check.map(line => line.slice(0, shown))), PX + 2, 3)
       return
+    }
     case 'failed':
       stamp(canvas, wide(['r...r', '.r.r.', '..r..', '.r.r.', 'r...r']), PX + 2, 3)
       return
