@@ -22,6 +22,7 @@ const PALETTE: Record<string, number> = {
   p: 0xf4a3b5,
   n: 0x8b5a2b,
   t: 0xf5ecd6,
+  d: 0x5f6368, // dim gray, for things fading out
 }
 
 // '_' erases: Clawd's eyes are holes in the body, as in the logo.
@@ -130,9 +131,22 @@ function drawProp(canvas: Canvas, kind: MoodKind, tick: number) {
         : ['.tttt.tttt.', 'tgggtntgggt', 'tttttnttttt', 'tggttntgggt', 'tttttnttttt', 'nnnnnnnnnnn']), PX, 5)
       return
     case 'editing': {
-      const shift = tick % 4
-      stamp(canvas, wide(['.....pp', '....yyp', '...yyy.', '..yyy..', '.yyy...', 'nny....', 'kn.....']), PX + shift * 2, 1)
-      stamp(canvas, wide(['g.'.repeat(shift + 1)]), PX, 10)
+      // The pencil writes a zigzag line left to right, its tip on the line,
+      // then holds a beat before starting over.
+      const at = Math.min(tick % 5, 3)
+      const line = [0, 1].map(row => [...Array(at + 1).keys()].map(i => (i % 2 === row ? '.' : 'g')).join(''))
+      stamp(canvas, wide(line), PX, 10)
+      stamp(canvas, wide([
+        '.......pp',
+        '......ggp',
+        '.....yyg.',
+        '....yyy..',
+        '...yyy...',
+        '..yyy....',
+        '.tyy.....',
+        '.kt......',
+        'd........',
+      ]), PX + at * 2, at % 2 === 0 ? 3 : 2)
       return
     }
     case 'searching': {
