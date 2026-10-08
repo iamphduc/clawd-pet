@@ -79,11 +79,11 @@ export function isCommitCommand(command: string): boolean {
 }
 
 /**
- * The first line of a commit's message from its `-m`, short; '' without one.
+ * The first line of a commit's message from its `-m` (also `-am` or `-m"msg"`), short; '' without one.
  * A heredoc message (`-m "$(cat <<'EOF' ... EOF)"`) gives its first line of text.
  */
 export function commitMessage(command: string): string {
-  const match = command.match(/(?:-m|--message)[ =](?:"((?:[^"\\]|\\.)*)"|'([^']*)'|(\S+))/)
+  const match = command.match(/(?:^|\s)(?:-[a-zA-Z]*m|--message)(?:\s+|=)?(?:"((?:[^"\\]|\\.)*)"|'([^']*)'|(\S+))/)
   let message = match?.[1] ?? match?.[2] ?? match?.[3] ?? ''
   if (message.includes('<<')) message = message.split('\n').slice(1).find(line => line.trim()) ?? ''
   return clip((message.split('\n')[0] ?? '').trim())

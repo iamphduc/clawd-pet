@@ -207,6 +207,15 @@ test('the commit message is the first line of -m, short', async () => {
   expect(commitMessage('git commit --amend --no-edit')).toBe('')
   expect(commitMessage(`git commit -m "$(cat <<'EOF'\nfeat: show clearer details\n\nBody text.\nEOF\n)"`)).toBe('feat: show clearer details')
   expect(commitMessage('git commit -m "docs: a very long message that goes on and on"').length).toBe(30)
+  expect(commitMessage('git commit -am "fix: y"')).toBe('fix: y')
+  expect(commitMessage('git commit -qam "fix: y"')).toBe('fix: y')
+  expect(commitMessage('git commit -m"fix: y"')).toBe('fix: y')
+  expect(commitMessage("git commit -am'fix: y'")).toBe('fix: y')
+  expect(commitMessage('git commit -mfix')).toBe('fix')
+  expect(commitMessage('git commit --message="fix: y"')).toBe('fix: y')
+  expect(commitMessage('git commit --amend -m "fix: z"')).toBe('fix: z')
+  expect(commitMessage('git commit --amend')).toBe('')
+  expect(commitMessage('git commit -v')).toBe('')
 })
 
 test('a commit makes the pet cheer with its message', async ($, on) => {
