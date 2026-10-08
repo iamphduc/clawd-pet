@@ -21,7 +21,7 @@ This is an unofficial fan project, not affiliated with or endorsed by Anthropic.
 | Running tests or a build that passes | Hops with happy eyes as a green check draws itself. | <img src="docs/moods/passed.png" alt="Clawd after passing checks" width="248"> |
 | Running tests or a build that fails | Squashes down with closed eyes beside a red X. | <img src="docs/moods/failed.png" alt="Clawd after failing checks" width="248"> |
 | Making a git commit | Cheers with "committed!" and the commit message. | <img src="docs/moods/happy.png" alt="Clawd cheering a commit" width="248"> |
-| Done with a turn | Jumps with happy eyes and sparkles. | <img src="docs/moods/happy.png" alt="Clawd cheering" width="248"> |
+| Done with a turn | Jumps with happy eyes as confetti falls. | <img src="docs/moods/happy.png" alt="Clawd cheering" width="248"> |
 | Hitting an error | Shows X eyes, a sweat drop, and a red "!". | <img src="docs/moods/error.png" alt="Clawd after an error" width="248"> |
 | Stopped by your plan's usage limit | Sleeps, with "resting" and the time the limit resets. | <img src="docs/moods/sleeping.png" alt="Clawd resting" width="248"> |
 
