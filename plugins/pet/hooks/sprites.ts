@@ -22,6 +22,7 @@ const PALETTE: Record<string, number> = {
   p: 0xf4a3b5,
   n: 0x8b5a2b,
   t: 0xf5ecd6,
+  d: 0x5f6368, // dim gray, for things fading out
 }
 
 // '_' erases: Clawd's eyes are holes in the body, as in the logo.
@@ -108,8 +109,13 @@ const PX = 38
 
 /** A mug of coffee with rising steam. */
 function drawCoffee(canvas: Canvas, tick: number) {
-  const steam = tick % 4 < 2 ? ['.g.g', 'g.g.', '.g.g'] : ['g.g.', '.g.g', 'g.g.']
-  stamp(canvas, wide(steam), PX + 2, 1)
+  // Two wisps of steam rise and sway out of step, fading near the top.
+  const sway = [0, 0, 1, 1]
+  for (let y = 0; y < 5; y++) {
+    const color = y === 0 ? 'd' : 'g'
+    stamp(canvas, wide([color]), PX + 2 + (sway[(y + tick) % 4] ?? 0) * 2, y)
+    stamp(canvas, wide([color]), PX + 8 + (sway[(y + tick + 1) % 4] ?? 0) * 2, y)
+  }
   stamp(canvas, wide(['wwwww..', 'wnnnwww', 'wwwww.w', 'wwwwwww', '.www...']), PX, 5)
 }
 
@@ -124,85 +130,148 @@ function drawBattery(canvas: Canvas, percent: number, y: number) {
 function drawProp(canvas: Canvas, kind: MoodKind, tick: number) {
   const odd = tick % 2 === 1
   switch (kind) {
-    case 'reading':
-      stamp(canvas, wide(odd
-        ? ['.......tt..', '.tttt.tgtt.', 'tgggtntttt.', 'tttttntggt.', 'tggttnttttt', 'nnnnnnnnnnn']
-        : ['.tttt.tttt.', 'tgggtntgggt', 'tttttnttttt', 'tggttntgggt', 'tttttnttttt', 'nnnnnnnnnnn']), PX, 5)
+    case 'reading': {
+      // An open book. Every 8 ticks a page lifts off the right side, stands
+      // up over the spine, and lands on the left, showing new lines of text.
+      const step = tick % 8
+      const page = Math.floor(tick / 8) % 2 === 0
+      stamp(canvas, wide(page
+        ? ['.tttt.tttt.', 'tgggtntgggt', 'tttttnttttt', 'tggttntgggt', 'tttttnttttt', 'nnnnnnnnnnn']
+        : ['.tttt.tttt.', 'tggttntgggt', 'tttttnttttt', 'tgggtntggtt', 'tttttnttttt', 'nnnnnnnnnnn']), PX, 5)
+      const turning = [
+        ['.........tt', '.......tt..', '......t....'],
+        ['.....t.....', '.....t.....', '.....t.....', '.....t.....'],
+        ['tt.........', '..tt.......', '....t......'],
+      ][step - 5]
+      if (turning) stamp(canvas, wide(turning), PX, 5 - turning.length + 1)
       return
+    }
     case 'editing': {
-      const shift = tick % 4
-      stamp(canvas, wide(['.....pp', '....yyp', '...yyy.', '..yyy..', '.yyy...', 'nny....', 'kn.....']), PX + shift * 2, 1)
-      stamp(canvas, wide(['g.'.repeat(shift + 1)]), PX, 10)
+      // The pencil writes a zigzag line left to right, its tip on the line,
+      // then holds a beat before starting over.
+      const at = Math.min(tick % 5, 3)
+      const line = [0, 1].map(row => [...Array(at + 1).keys()].map(i => (i % 2 === row ? '.' : 'g')).join(''))
+      stamp(canvas, wide(line), PX, 10)
+      stamp(canvas, wide([
+        '.......pp',
+        '......ggp',
+        '.....yyg.',
+        '....yyy..',
+        '...yyy...',
+        '..yyy....',
+        '.tyy.....',
+        '.kt......',
+        'd........',
+      ]), PX + at * 2, at % 2 === 0 ? 3 : 2)
       return
     }
     case 'searching': {
-      const sweep = [0, 1, 2, 1][tick % 4] ?? 0
-      stamp(canvas, wide(['.ggg...', 'gcccg..', 'gcwcg..', 'gcccg..', '.ggg...', '....n..', '.....n.', '......n']), PX + sweep * 2, 2)
+      // The magnifier circles slowly, as if scanning a page.
+      const path: [number, number][] = [[0, 2], [1, 1], [2, 1], [3, 2], [2, 3], [1, 3]]
+      const [dx, dy] = path[tick % 6] ?? [0, 2]
+      stamp(canvas, wide([
+        '..ggg....',
+        '.gwccg...',
+        'gwccccg..',
+        'gcccccg..',
+        'gcccccg..',
+        '.gcccg...',
+        '..ggg.n..',
+        '.......n.',
+        '........n',
+      ]), PX + dx * 2, dy - 1)
       return
     }
-    case 'running':
-      stamp(canvas, wide([
-        'gggggggggg',
-        'gkkkkkkkkg',
-        'gkykkkkkkg',
-        'gkkykkkkkg',
-        'gkykk' + (odd ? 'kk' : 'ww') + 'kkg',
-        'gkkkkkkkkg',
-        'gggggggggg',
-      ]), PX, 4)
-      return
-    case 'web': {
-      const globe: string[] = []
-      for (let y = 0; y < 8; y++) {
-        let line = ''
-        for (let x = 0; x < 8; x++) {
-          const inside = (x - 3.5) ** 2 + (y - 3.5) ** 2 <= 15
-          const land = (x + tick) % 8 < 3 && y > 1 && y < 6
-          line += !inside ? '.' : land ? 'G' : (x + tick) % 4 === 0 ? 'c' : 'B'
-        }
-        globe.push(line)
+    case 'running': {
+      // A rocket in flight: stars stream past it, the near ones faster.
+      const stars: [number, number, number][] = [[0, 1, 0], [1, 2, 5], [2, 1, 8], [9, 2, 2], [10, 1, 6], [11, 2, 9]]
+      for (const [x, speed, offset] of stars) {
+        const y = (tick * speed + offset) % 12
+        stamp(canvas, speed === 2 ? ['w', 'g'] : ['g'], PX + x * 2, y)
       }
-      stamp(canvas, wide(globe), PX + 2, 2)
+      stamp(canvas, wide(['..w..', '.www.', '.wcw.', '.www.', 'rwwwr', 'r.r.r']), PX + 6, 1)
+      stamp(canvas, wide(odd ? ['.yry.', '..y..'] : ['.yyy.', '.yry.', '..y..']), PX + 6, 7)
+      return
+    }
+    case 'web': {
+      // A browser window: a title bar with three dots and an address bar, and
+      // a page whose heading, then lines of text, fill in as it loads.
+      const shown = (tick % 8) * 3
+      const line = (text: string, from: number) => {
+        const n = Math.max(0, Math.min(shown - from, text.length))
+        return 'gw' + text.slice(0, n) + 'w'.repeat(text.length - n) + 'wg'
+      }
+      stamp(canvas, wide([
+        'gggggggggggg',
+        'grgygGgwwwwg',
+        'gggggggggggg',
+        'gwwwwwwwwwwg',
+        line('BBBBBwww', 0),
+        'gwwwwwwwwwwg',
+        line('gggggggg', 6),
+        'gwwwwwwwwwwg',
+        line('gggggwww', 12),
+        'gwwwwwwwwwwg',
+        'gggggggggggg',
+      ]), PX, 0)
       return
     }
     case 'thinking': {
       const dots = Math.floor(tick / 2) % 4
       const inner = [0, 1, 2].map(i => (i < dots ? 'k' : 'w')).join('w')
-      stamp(canvas, wide(['.wwwwwwww.', 'wwwwwwwwww', 'ww' + inner + 'www', 'wwwwwwwwww', '.wwwwwwww.']), PX, 0)
-      stamp(canvas, wide(['ww', 'ww']), PX - 2, 6)
-      stamp(canvas, wide(['w']), PX - 4, 9)
+      stamp(canvas, wide(['.wwwwwwww.', 'wwwwwwwwww', 'ww' + inner + 'www', 'wwwwwwwwww', '.wwwwwwww.']), PX + 2, 0)
+      // Two dots trail from the bubble down to Clawd's head.
+      stamp(canvas, ['ww'], 34, 4)
+      stamp(canvas, ['ww'], 37, 3)
       return
     }
     case 'sleeping': {
-      const rise = tick % 6
-      stamp(canvas, wide(['gggg', '..g.', '.g..', 'gggg']), PX, 4 - rise)
-      stamp(canvas, wide(['ggg', '.g.', 'ggg']), PX + 10, 2 - rise)
+      // Two Zs, half a cycle apart: each starts small by the head, grows as it
+      // drifts up and right, and fades out. They keep a row clear above the battery.
+      const small = ['gggg', '..g.', '.g..', 'gggg']
+      const big = ['ggggg', '...g.', '..g..', '.g...', 'ggggg']
+      const path: [string[], number, number][] = [[small, 0, 3], [small, 1, 2], [big, 2, 2], [big, 4, 1], [big, 6, 0], [big, 7, 0]]
+      for (const phase of [tick % 6, (tick + 3) % 6]) {
+        const [art, x, y] = path[phase] ?? [small, 0, 3]
+        stamp(canvas, wide(phase === 5 ? art.map(line => line.replaceAll('g', 'd')) : art), PX + x * 2, y)
+      }
       return
     }
     case 'happy': {
-      const big = wide(['..y..', '.yyy.', 'yyyyy', '.yyy.', '..y..'])
-      const small = wide(['.y.', 'yyy', '.y.'])
-      stamp(canvas, odd ? big : small, PX, odd ? 1 : 3)
-      stamp(canvas, odd ? small : big, PX + 12, odd ? 7 : 5)
+      // Confetti flutters down, each bit flipping flat, then on edge, as it falls.
+      const confetti: [number, string, number][] = [[0, 'r', 0], [2, 'y', 3], [3, 'y', 5], [5, 'c', 9], [7, 'G', 2], [8, 'r', 10], [9, 'p', 7], [10, 'B', 11]]
+      for (const [x, color, offset] of confetti) {
+        const t = tick + offset
+        const sway = t % 4 < 2 ? 0 : 1
+        stamp(canvas, t % 2 ? [color, color] : wide([color]), PX + x * 2 + sway, t % 12)
+      }
       return
     }
-    case 'error':
-      stamp(canvas, wide(['.c.', 'ccc', 'ccc', '.c.']), 32, (tick % 4) - 1)
+    case 'error': {
+      // A sweat drop beside the head slides down, then a new one forms. It's
+      // drawn in half-width pixels, fine enough to taper to a point.
+      const slide = tick % 4
+      if (slide < 3) stamp(canvas, ['..c..', '.ccc.', 'ccccc', 'ccccc', '.ccc.'], 30, slide)
       stamp(canvas, wide(['rr', 'rr', 'rr', 'rr', '..', 'rr']), PX + 4, 2)
       return
+    }
     case 'subagent':
       // A helper Clawd: the logo at its own size.
       stamp(canvas, [HEAD, FACE, ARMS, HEAD, LEGS[odd ? 1 : 0] ?? ''], PX + 2, odd ? 6 : 7)
       return
     case 'waiting':
-      stamp(canvas, wide(['.wwwww.', 'wwkkkww', 'wwwwkww', 'wwwkwww', 'wwwwwww', 'wwwkwww', '.wwwww.']), PX + 2, 0)
-      stamp(canvas, wide(['w']), PX, 8)
+      // A big question mark bounces beside the waving Clawd.
+      stamp(canvas, wide(['.yyyy.', 'yy..yy', '....yy', '...yy.', '..yy..', '......', '..yy..']), PX + 4, odd ? 1 : 3)
       return
-    case 'passed':
-      stamp(canvas, wide(['.....G', '....GG', 'G..GG.', 'GGGG..', '.GG...']), PX + 2, odd ? 2 : 3)
+    case 'passed': {
+      // The check draws itself left to right, then holds.
+      const shown = [2, 4, 6, 9, 9, 9, 9, 9][tick % 8] ?? 9
+      const check = ['.......GG', '......GG.', 'GG...GG..', '.GG.GG...', '..GGG....', '...G.....']
+      stamp(canvas, wide(check.map(line => line.slice(0, shown))), PX + 2, 3)
       return
+    }
     case 'failed':
-      stamp(canvas, wide(['r...r', '.r.r.', '..r..', '.r.r.', 'r...r']), PX + 2, 3)
+      stamp(canvas, wide(['r.....r', '.r...r.', '..r.r..', '...r...', '..r.r..', '.r...r.', 'r.....r']), PX + 4, 2)
       return
     case 'idle':
       return
@@ -253,8 +322,12 @@ export function drawFrame(kind: MoodKind, tick: number, context = 0, hour = 12):
     case 'subagent':
       pet({ squash: breath, look: 2 })
       break
+    case 'reading':
+      // Eyes glide across a line left to right, then jump back to the next.
+      pet({ lift: odd ? 2 : 0, step: odd, look: [-2, -1, 0, 1, 2, -2, -1, 0][tick % 8] ?? 0 })
+      break
     default:
-      // reading, editing, searching, running, web: busy little steps
+      // editing, searching, running, web: busy little steps
       pet({ lift: odd ? 2 : 0, step: odd, look: 2 })
   }
   drawProp(canvas, art, tick)
