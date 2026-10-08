@@ -182,17 +182,17 @@ function drawProp(canvas: Canvas, kind: MoodKind, tick: number) {
       ]), PX + dx * 2, dy - 1)
       return
     }
-    case 'running':
-      stamp(canvas, wide([
-        'gggggggggg',
-        'gkkkkkkkkg',
-        'gkykkkkkkg',
-        'gkkykkkkkg',
-        'gkykk' + (odd ? 'kk' : 'ww') + 'kkg',
-        'gkkkkkkkkg',
-        'gggggggggg',
-      ]), PX, 4)
+    case 'running': {
+      // A rocket in flight: stars stream past it, the near ones faster.
+      const stars: [number, number, number][] = [[0, 1, 0], [1, 2, 5], [2, 1, 8], [9, 2, 2], [10, 1, 6], [11, 2, 9]]
+      for (const [x, speed, offset] of stars) {
+        const y = (tick * speed + offset) % 12
+        stamp(canvas, speed === 2 ? ['w', 'g'] : ['g'], PX + x * 2, y)
+      }
+      stamp(canvas, wide(['..w..', '.www.', '.wcw.', '.www.', 'rwwwr', 'r.r.r']), PX + 6, 1)
+      stamp(canvas, wide(odd ? ['.yry.', '..y..'] : ['.yyy.', '.yry.', '..y..']), PX + 6, 7)
       return
+    }
     case 'web': {
       // A browser window: a title bar with three dots and an address bar, and
       // a page whose heading, then lines of text, fill in as it loads.
