@@ -39,6 +39,9 @@ const BAND = {
   props: { hasSurvey: false, isWorking: true, maxRows: 20, bodyColumns: 80, scroll: { offset: 0, bodyRows: 20 }, view: {} },
 } as const
 
+// The plugin's type set has no DOM or Node types; the test runtime has this.
+declare const setTimeout: (callback: (...args: never[]) => void, ms: number) => unknown
+
 test('the pet reads while Read runs, then goes back to thinking', async ($, on) => {
   mock.clock(on)
   let during: string | undefined
@@ -63,6 +66,75 @@ test('a failed tool makes the pet upset', async ($, on) => {
   await $.tool.call({ tool: 'Bash', command: 'false' })
 
   expect(await band.find({ text: 'oops' })).toBeDefined()
+})
+
+test('one subagent ending keeps the pet with the other helper', async ($, on) => {
+  mock.clock(on)
+  const gates = new Map<string, () => void>()
+  on('tool.call', async (_$, e) => {
+    const key = String((e as Record<string, unknown>).description)
+    await new Promise<void>(resolve => gates.set(key, resolve))
+    return { result: 'ok' }
+  })
+  const band = await $.ui.mount(BAND)
+  const first = $.tool.call({ tool: 'Agent', description: 'one', prompt: 'x' } as never)
+  const second = $.tool.call({ tool: 'Agent', description: 'two', prompt: 'x' } as never)
+  // Give both calls time to reach the core handler before resolving.
+  await new Promise(resolve => setTimeout(resolve, 0))
+
+  gates.get('one')?.()
+  await first
+  expect(await band.find({ text: 'with a helper' })).toBeDefined()
+  expect(await band.find({ text: 'thinking' })).toBeUndefined()
+
+  gates.get('two')?.()
+  await second
+  expect(await band.find({ text: 'thinking' })).toBeDefined()
+})
+
+test('a check that ends beside a running helper returns to the helper', async ($, on) => {
+  const clock = mock.clock(on)
+  on('session.start', async () => ({ cwd: '/repo' }))
+  on('command.register', async () => ({ value: {} }) as never)
+  on('ui.blit', async () => ({ value: {} }) as never)
+  const gates = new Map<string, () => void>()
+  on('tool.call', async (_$, e) => {
+    const key = String((e as Record<string, unknown>).description)
+    await new Promise<void>(resolve => gates.set(key, resolve))
+    return key === 'tests' ? { result: 'ok', text: '3 pass\n0 fail' } : { result: 'ok' }
+  })
+  await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
+  const band = await $.ui.mount(BAND)
+  const helper = $.tool.call({ tool: 'Agent', description: 'helper', prompt: 'x' } as never)
+  const tests = $.tool.call({ tool: 'Bash', command: 'npm test', description: 'tests' } as never)
+  await new Promise(resolve => setTimeout(resolve, 0))
+
+  gates.get('tests')?.()
+  await tests
+  expect(await band.find({ text: 'checks passed!' })).toBeDefined()
+  await clock.advance(3_500)
+  expect(await band.find({ text: 'with a helper' })).toBeDefined()
+
+  gates.get('helper')?.()
+  await helper
+})
+
+test('a new turn forgets calls that never ended', async ($, on) => {
+  mock.clock(on)
+  on('turn.start', async (_$, e) => ({ turnId: e.turnId }))
+  on('tool.call', async (_$, e) => {
+    if (String((e as Record<string, unknown>).tool) === 'Agent') await new Promise<void>(() => {})
+    return { result: 'ok' }
+  })
+  const band = await $.ui.mount(BAND)
+  void $.tool.call({ tool: 'Agent', description: 'stuck', prompt: 'x' } as never)
+  await new Promise(resolve => setTimeout(resolve, 0))
+
+  await $.turn.start({ text: 'next', turnId: 't2' })
+  await $.tool.call({ tool: 'Read', file_path: '/repo/a.ts' })
+
+  expect(await band.find({ text: 'thinking' })).toBeDefined()
+  expect(await band.find({ text: 'with a helper' })).toBeUndefined()
 })
 
 test('idle and sleeping draw a battery at any context fill', async () => {

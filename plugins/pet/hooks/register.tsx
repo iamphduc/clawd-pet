@@ -176,6 +176,12 @@ export const register: Register = on => {
   // been seen running since: Clawd goes back to it instead of waving on.
   let beforePrompt: { kind: MoodKind; detail: string } | undefined
   let isApprovedRunning = false
+  // Main-thread tool calls still running, by call, with the mood each shows.
+  // When one ends, Clawd goes back to a call still running instead of thinking.
+  const running = new Map<number, { kind: MoodKind; detail: string }>()
+  let nextCallId = 0
+  /** The latest tool call still running, or undefined when none is. */
+  const latestRunning = () => [...running.values()].at(-1)
   // `/pet hour` fakes the hour until this time, for previews.
   let fakeHour = 0
   let fakeHourUntil = 0
@@ -201,7 +207,8 @@ export const register: Register = on => {
         let current = await read($, mood)
         const now = await $.clock.now()
         if (current.until && now > current.until) {
-          await (demoQueue.length > 0 ? nextDemoMood($) : setMood($, current.then))
+          const back = current.then === 'thinking' ? latestRunning() : undefined
+          await (demoQueue.length > 0 ? nextDemoMood($) : back ? setMood($, back.kind, back.detail) : setMood($, current.then))
           current = await read($, mood)
         } else if (current.kind === 'waiting' && isApprovedRunning && beforePrompt !== undefined) {
           await setMood($, beforePrompt.kind, beforePrompt.detail)
@@ -314,6 +321,8 @@ export const register: Register = on => {
   })
 
   on('turn.start', async ($, e, next) => {
+    // A call that never ended must not keep Clawd busy.
+    running.clear()
     await setMood($, 'thinking')
     return next(e)
   })
@@ -324,8 +333,16 @@ export const register: Register = on => {
 
     const tool = String(e.tool)
     const input = e as Record<string, unknown>
-    await setMood($, moodForTool(tool), detailForTool(input))
-    const result = await next(e)
+    const callId = nextCallId++
+    const shown = { kind: moodForTool(tool), detail: detailForTool(input) }
+    running.set(callId, shown)
+    await setMood($, shown.kind, shown.detail)
+    let result
+    try {
+      result = await next(e)
+    } finally {
+      running.delete(callId)
+    }
     beforePrompt = undefined
     const command = typeof input.command === 'string' ? input.command : ''
     const isRan = moodForTool(tool) === 'running' && result.deny === undefined
@@ -337,7 +354,8 @@ export const register: Register = on => {
     } else if (result.isError || result.deny !== undefined) {
       await setMood($, 'error', tool, SHORT_MOOD_MS, 'thinking')
     } else {
-      await setMood($, 'thinking')
+      const back = latestRunning()
+      await (back ? setMood($, back.kind, back.detail) : setMood($, 'thinking'))
     }
     return result
   })
