@@ -257,7 +257,9 @@ function drawProp(canvas: Canvas, kind: MoodKind, tick: number) {
       return
     case 'waiting':
       stamp(canvas, wide(['.wwwww.', 'wwkkkww', 'wwwwkww', 'wwwkwww', 'wwwwwww', 'wwwkwww', '.wwwww.']), PX + 2, 0)
-      stamp(canvas, wide(['w']), PX, 8)
+      // Two dots trail from the bubble down to Clawd's head.
+      stamp(canvas, ['ww'], 34, 4)
+      stamp(canvas, ['ww'], 37, 3)
       return
     case 'passed':
       stamp(canvas, wide(['.....G', '....GG', 'G..GG.', 'GGGG..', '.GG...']), PX + 2, odd ? 2 : 3)
