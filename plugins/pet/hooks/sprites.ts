@@ -150,8 +150,20 @@ function drawProp(canvas: Canvas, kind: MoodKind, tick: number) {
       return
     }
     case 'searching': {
-      const sweep = [0, 1, 2, 1][tick % 4] ?? 0
-      stamp(canvas, wide(['.ggg...', 'gcccg..', 'gcwcg..', 'gcccg..', '.ggg...', '....n..', '.....n.', '......n']), PX + sweep * 2, 2)
+      // The magnifier circles slowly, as if scanning a page.
+      const path: [number, number][] = [[0, 2], [1, 1], [2, 1], [3, 2], [2, 3], [1, 3]]
+      const [dx, dy] = path[tick % 6] ?? [0, 2]
+      stamp(canvas, wide([
+        '..ggg....',
+        '.gwccg...',
+        'gwccccg..',
+        'gcccccg..',
+        'gcccccg..',
+        '.gcccgn..',
+        '..gggnn..',
+        '......nn.',
+        '.......nn',
+      ]), PX + dx * 2, dy - 1)
       return
     }
     case 'running':
