@@ -287,6 +287,57 @@ test('after a prompt is approved, Clawd stops waving once the tool runs', async 
   expect(await band.find({ type: 'Text', text: 'needs you' })).toBeUndefined()
 })
 
+test("a subagent's permission prompt makes the pet wave, then go back to the helper", async ($, on) => {
+  mock.clock(on)
+  const gates = new Map<string, () => void>()
+  on('classic.PermissionRequest', async () => ({}))
+  on('tool.call', async (_$, e) => {
+    const fields = e as Record<string, unknown>
+    if (fields.tool === 'Agent') await new Promise<void>(resolve => gates.set(String(fields.description), resolve))
+    return { result: 'ok' }
+  })
+  const band = await $.ui.mount(BAND)
+  const agent = $.tool.call({ tool: 'Agent', description: 'one', prompt: 'x' } as never)
+  await new Promise(resolve => setTimeout(resolve, 0))
+
+  await $.classic.PermissionRequest({ tool_name: 'Edit', tool_input: { file_path: '/repo/x.ts' }, agent_id: 'a1' } as never)
+  expect(await band.find({ type: 'Text', text: 'needs you' })).toBeDefined()
+  expect(await band.find({ type: 'Text', text: 'x.ts' })).toBeDefined()
+
+  await $.tool.call({ tool: 'Edit', file_path: '/repo/x.ts', agentId: 'a1' } as never)
+  expect(await band.find({ type: 'Text', text: 'with a helper' })).toBeDefined()
+  expect(await band.find({ type: 'Text', text: 'needs you' })).toBeUndefined()
+
+  gates.get('one')?.()
+  await agent
+})
+
+test("a helper ending keeps the wave for another helper's prompt", async ($, on) => {
+  mock.clock(on)
+  const gates = new Map<string, () => void>()
+  on('classic.PermissionRequest', async () => ({}))
+  on('tool.call', async (_$, e) => {
+    const fields = e as Record<string, unknown>
+    if (fields.tool === 'Agent') await new Promise<void>(resolve => gates.set(String(fields.description), resolve))
+    return { result: 'ok' }
+  })
+  const band = await $.ui.mount(BAND)
+  const first = $.tool.call({ tool: 'Agent', description: 'one', prompt: 'x' } as never)
+  const second = $.tool.call({ tool: 'Agent', description: 'two', prompt: 'x' } as never)
+  await new Promise(resolve => setTimeout(resolve, 0))
+
+  await $.classic.PermissionRequest({ tool_name: 'Edit', tool_input: { file_path: '/repo/x.ts' }, agent_id: 'a2' } as never)
+  gates.get('one')?.()
+  await first
+  expect(await band.find({ type: 'Text', text: 'needs you' })).toBeDefined()
+
+  await $.tool.call({ tool: 'Edit', file_path: '/repo/x.ts', agentId: 'a2' } as never)
+  expect(await band.find({ type: 'Text', text: 'with a helper' })).toBeDefined()
+
+  gates.get('two')?.()
+  await second
+})
+
 describe('the frame timer', () => {
   const start = async (...[$, on]: Parameters<TestBody>) => {
     const clock = mock.clock(on)
