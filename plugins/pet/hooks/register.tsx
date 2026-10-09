@@ -170,12 +170,10 @@ async function nextDemoMood($: EngineInterface) {
   demoQueue = rest
 }
 
-/** Shows what Clawd is doing now: waving at an open prompt, else the latest running call, else thinking. */
-async function settle($: EngineInterface, prompts: Map<string, string>, running: Map<number, { kind: MoodKind; detail: string }>) {
-  const asking = [...prompts.values()].at(-1)
+/** Shows what Clawd is doing now: the latest running call, else thinking. */
+async function settle($: EngineInterface, running: Map<number, { kind: MoodKind; detail: string }>) {
   const back = [...running.values()].at(-1)
-  if (asking !== undefined) await setMood($, 'waiting', asking)
-  else if (back) await setMood($, back.kind, back.detail)
+  if (back) await setMood($, back.kind, back.detail)
   else await setMood($, 'thinking')
 }
 
@@ -189,12 +187,6 @@ export const register: Register = on => {
   // When one ends, Clawd goes back to a call still running instead of thinking.
   const running = new Map<number, { kind: MoodKind; detail: string }>()
   let nextCallId = 0
-  // Open permission prompts, by who asked ('main', or a subagent's id), with
-  // what each wants to run. Clawd waves while any is open.
-  const prompts = new Map<string, string>()
-  // Whether the main thread's approved tool has been seen running: the frame
-  // timer then closes its prompt.
-  let isApprovedRunning = false
   // `/pet hour` fakes the hour until this time, for previews.
   let fakeHour = 0
   let fakeHourUntil = 0
@@ -220,12 +212,7 @@ export const register: Register = on => {
         let current = await read($, mood)
         const now = await $.clock.now()
         if (current.until && now > current.until) {
-          await (demoQueue.length > 0 ? nextDemoMood($) : current.then === 'thinking' ? settle($, prompts, running) : setMood($, current.then))
-          current = await read($, mood)
-        } else if (current.kind === 'waiting' && isApprovedRunning && prompts.has('main')) {
-          prompts.delete('main')
-          isApprovedRunning = false
-          await settle($, prompts, running)
+          await (demoQueue.length > 0 ? nextDemoMood($) : current.then === 'thinking' ? settle($, running) : setMood($, current.then))
           current = await read($, mood)
         } else if (current.kind === 'idle' && now - current.since > SLEEP_AFTER_MS) {
           await setMood($, 'sleeping')
@@ -312,59 +299,16 @@ export const register: Register = on => {
     return next(e)
   })
 
-  // A permission prompt is about to show, for the main thread or a subagent:
-  // Clawd waves until that prompt's tool call ends.
-  on('classic.PermissionRequest', async ($, e, next) => {
-    const input = typeof e.tool_input === 'object' && e.tool_input !== null ? (e.tool_input as Record<string, unknown>) : {}
-    const asking = detailForTool(input) || e.tool_name
-    prompts.set(e.agent_id ?? 'main', asking)
-    if (e.agent_id === undefined) isApprovedRunning = false
-    await setMood($, 'waiting', asking)
-    return next(e)
-  })
-
-  // An MCP server asks for input (a form or a link): Clawd waves with the
-  // server's name until the user answers.
-  on('classic.Elicitation', async ($, e, next) => {
-    const asking = clip(e.mcp_server_name)
-    prompts.set(`mcp:${e.elicitation_id ?? e.mcp_server_name}`, asking)
-    await setMood($, 'waiting', asking)
-    return next(e)
-  })
-
-  on('classic.ElicitationResult', async ($, e, next) => {
-    if (prompts.delete(`mcp:${e.elicitation_id ?? e.mcp_server_name}`)) await settle($, prompts, running)
-    return next(e)
-  })
-
-  // A tool's progress row (the ctrl+b hint) only shows once the tool runs, so
-  // while Clawd waits it means the prompt was approved. Drawing can't write
-  // state, so the frame timer makes the switch.
-  on('ui.render', { component: 'ToolProgress' }, ($, e, next) => {
-    if (prompts.has('main')) isApprovedRunning = true
-    return next(e)
-  })
-
   on('turn.start', async ($, e, next) => {
-    // Calls and prompts that never ended must not keep Clawd busy.
+    // Calls that never ended must not keep Clawd busy.
     running.clear()
-    prompts.clear()
-    isApprovedRunning = false
     await setMood($, 'thinking')
     return next(e)
   })
 
   on('tool.call', async ($, e, next) => {
-    // A subagent's own tools: the pet keeps showing its helper. When the tool
-    // a subagent's prompt asked about ends, Clawd stops waving for it.
-    if (e.agentId !== undefined) {
-      const agentId = e.agentId
-      try {
-        return await next(e)
-      } finally {
-        if (prompts.delete(agentId)) await settle($, prompts, running)
-      }
-    }
+    // A subagent's own tools: the pet keeps showing its helper.
+    if (e.agentId !== undefined) return next(e)
 
     const tool = String(e.tool)
     const input = e as Record<string, unknown>
@@ -378,7 +322,6 @@ export const register: Register = on => {
     } finally {
       running.delete(callId)
     }
-    prompts.delete('main')
     const command = typeof input.command === 'string' ? input.command : ''
     const isRan = moodForTool(tool) === 'running' && result.deny === undefined
     if (isRan && result.isError !== true && isCommitCommand(command)) {
@@ -389,7 +332,7 @@ export const register: Register = on => {
     } else if (result.isError || result.deny !== undefined) {
       await setMood($, 'error', tool, SHORT_MOOD_MS, 'thinking')
     } else {
-      await settle($, prompts, running)
+      await settle($, running)
     }
     return result
   })
