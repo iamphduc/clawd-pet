@@ -1,63 +1,66 @@
-import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register } from 'claude-code'
+import { atom, read, update } from 'claude-code';
+import type { EngineInterface, Register } from 'claude-code';
 
-import type { Mood, MoodKind, RateLimit } from '../types'
-import { MOODS } from './moods/index.ts'
-import { COLUMNS, ROWS, drawFrame, encode } from './sprites'
+import type { Mood, MoodKind, RateLimit } from '../types';
+import { MOODS } from './moods/index.ts';
+import { COLUMNS, ROWS, drawFrame, encode } from './sprites';
 
-const FRAME_MS = 250
-const SLEEP_AFTER_MS = 60_000
-const SHORT_MOOD_MS = 3_000
+const FRAME_MS = 250;
+const SLEEP_AFTER_MS = 60_000;
+const SHORT_MOOD_MS = 3_000;
 // Context use, in percent, at which Clawd shows its battery and then warns.
-const CONTEXT_SHOW = 50
-const CONTEXT_WARN = 80
+const CONTEXT_SHOW = 50;
+const CONTEXT_WARN = 80;
 // Plan usage, in percent of a rate-limit window, at which Clawd warns once.
-const LIMIT_WARN = 90
+const LIMIT_WARN = 90;
 
-const mood = atom({ plugin: 'pet', key: 'mood' } as const, {
-  kind: 'idle',
-  detail: '',
-  since: 0,
-  until: 0,
-  then: 'idle',
-} as Mood)
-const context = atom({ plugin: 'pet', key: 'context' } as const, null as number | null)
+const mood = atom(
+  { plugin: 'pet', key: 'mood' } as const,
+  {
+    kind: 'idle',
+    detail: '',
+    since: 0,
+    until: 0,
+    then: 'idle',
+  } as Mood,
+);
+const context = atom({ plugin: 'pet', key: 'context' } as const, null as number | null);
 // Kept in $.state, not the module, so a reload doesn't show the toast again.
-const hasWarned = atom({ plugin: 'pet', key: 'hasWarned' } as const, false)
-const isOff = atom({ plugin: 'pet', key: 'isOff' } as const, false)
-const limits = atom({ plugin: 'pet', key: 'limits' } as const, [] as RateLimit[])
-const limitsWarned = atom({ plugin: 'pet', key: 'limitsWarned' } as const, [] as string[])
+const hasWarned = atom({ plugin: 'pet', key: 'hasWarned' } as const, false);
+const isOff = atom({ plugin: 'pet', key: 'isOff' } as const, false);
+const limits = atom({ plugin: 'pet', key: 'limits' } as const, [] as RateLimit[]);
+const limitsWarned = atom({ plugin: 'pet', key: 'limitsWarned' } as const, [] as string[]);
 
 export function moodForTool(tool: string): MoodKind {
-  if (tool === 'Read') return 'reading'
-  if (['Edit', 'Write', 'MultiEdit', 'NotebookEdit'].includes(tool)) return 'editing'
-  if (['Grep', 'Glob', 'LSP', 'ToolSearch'].includes(tool)) return 'searching'
-  if (['Bash', 'PowerShell'].includes(tool)) return 'running'
-  if (['WebFetch', 'WebSearch'].includes(tool)) return 'web'
-  if (['Agent', 'Task'].includes(tool)) return 'subagent'
-  if (tool === 'AskUserQuestion') return 'waiting'
-  return 'thinking'
+  if (tool === 'Read') return 'reading';
+  if (['Edit', 'Write', 'MultiEdit', 'NotebookEdit'].includes(tool)) return 'editing';
+  if (['Grep', 'Glob', 'LSP', 'ToolSearch'].includes(tool)) return 'searching';
+  if (['Bash', 'PowerShell'].includes(tool)) return 'running';
+  if (['WebFetch', 'WebSearch'].includes(tool)) return 'web';
+  if (['Agent', 'Task'].includes(tool)) return 'subagent';
+  if (tool === 'AskUserQuestion') return 'waiting';
+  return 'thinking';
 }
 
 // Long enough for a file name or a short description, short enough to keep the band calm.
-const DETAIL_MAX = 30
+const DETAIL_MAX = 30;
 
 export function detailForTool(input: Record<string, unknown>): string {
-  const pick = (key: string) => (typeof input[key] === 'string' ? (input[key] as string) : '')
-  const path = pick('file_path') || pick('notebook_path')
-  if (path) return path.split(/[\\/]/).pop() ?? ''
+  const pick = (key: string) => (typeof input[key] === 'string' ? input[key] : '');
+  const path = pick('file_path') || pick('notebook_path');
+  if (path) return path.split(/[\\/]/).pop() ?? '';
   // A command's own description ("Run the tests") says more than its first characters.
-  const command = pick('command').replace(/^(cd\s+\S+\s*&&\s*)+/, '')
-  return clip(pick('pattern') || pick('description') || command || pick('query') || pick('url'))
+  const command = pick('command').replace(/^(cd\s+\S+\s*&&\s*)+/, '');
+  return clip(pick('pattern') || pick('description') || command || pick('query') || pick('url'));
 }
 
 function clip(text: string): string {
-  return text.length > DETAIL_MAX ? text.slice(0, DETAIL_MAX - 1) + '…' : text
+  return text.length > DETAIL_MAX ? text.slice(0, DETAIL_MAX - 1) + '…' : text;
 }
 
 /** Whether a shell command makes a git commit, in any of its steps. */
 export function isCommitCommand(command: string): boolean {
-  return command.split(/&&|\|\||;|\|/).some(step => /^git( -C \S+)? commit(\s|$)/.test(step.trim()))
+  return command.split(/&&|\|\||;|\|/).some((step) => /^git( -C \S+)? commit(\s|$)/.test(step.trim()));
 }
 
 /**
@@ -65,10 +68,15 @@ export function isCommitCommand(command: string): boolean {
  * A heredoc message (`-m "$(cat <<'EOF' ... EOF)"`) gives its first line of text.
  */
 export function commitMessage(command: string): string {
-  const match = command.match(/(?:^|\s)(?:-[a-zA-Z]*m|--message)(?:\s+|=)?(?:"((?:[^"\\]|\\.)*)"|'([^']*)'|(\S+))/)
-  let message = match?.[1] ?? match?.[2] ?? match?.[3] ?? ''
-  if (message.includes('<<')) message = message.split('\n').slice(1).find(line => line.trim()) ?? ''
-  return clip((message.split('\n')[0] ?? '').trim())
+  const match = command.match(/(?:^|\s)(?:-[a-zA-Z]*m|--message)(?:\s+|=)?(?:"((?:[^"\\]|\\.)*)"|'([^']*)'|(\S+))/);
+  let message = match?.[1] ?? match?.[2] ?? match?.[3] ?? '';
+  if (message.includes('<<'))
+    message =
+      message
+        .split('\n')
+        .slice(1)
+        .find((line) => line.trim()) ?? '';
+  return clip((message.split('\n')[0] ?? '').trim());
 }
 
 // A shell step that runs tests, a build, a type check, or a linter: the tool
@@ -85,278 +93,312 @@ const CHECK_STEPS = [
   /^(mvn|gradle|\.\/gradlew) .*\b(test|build|check)\b/,
   /^make( (test|check|build))?$/,
   /^claude plugin (test|validate)\b/,
-]
-const FAILED_OUTPUT = /\b[1-9]\d* (fail|failed|failing|failures?|errors?)\b|\bFAIL(ED)?\b|\bBuild failed\b/
+];
+const FAILED_OUTPUT = /\b[1-9]\d* (fail|failed|failing|failures?|errors?)\b|\bFAIL(ED)?\b|\bBuild failed\b/;
 
 // Settings before a command, such as `CI=1 npm test`, aren't the tool.
-const ENV_SETTINGS = /^([A-Za-z_]\w*=\S*\s+)+/
+const ENV_SETTINGS = /^([A-Za-z_]\w*=\S*\s+)+/;
 
 /** Whether a shell command runs tests, a build, a type check, or a linter. */
 export function isCheckCommand(command: string): boolean {
-  return command.split(/&&|\|\||;|\|/).some(step => CHECK_STEPS.some(re => re.test(step.trim().replace(ENV_SETTINGS, ''))))
+  return command
+    .split(/&&|\|\||;|\|/)
+    .some((step) => CHECK_STEPS.some((re) => re.test(step.trim().replace(ENV_SETTINGS, ''))));
 }
 
 /** Whether a check command's run passed, from its error flag and its output. */
 export function checkPassed(isError: boolean, output: string): boolean {
-  return !isError && !FAILED_OUTPUT.test(output)
+  return !isError && !FAILED_OUTPUT.test(output);
 }
 
 // The mood last set, kept outside $.state so the frame timer can decide to
 // skip a frame without a call.
-let lastKind: MoodKind = 'idle'
+let lastKind: MoodKind = 'idle';
 // Mirrors the isOff state for the frame timer, which skips all work while Clawd is off.
-let isOffNow = false
+let isOffNow = false;
 
 /** Whether a mood is a sleeping Clawd, which moves at a quarter speed. */
 function isAsleep(kind: MoodKind): boolean {
-  return MOODS[kind].slow === true
+  return MOODS[kind].slow === true;
 }
 
 /** The animation step for a frame: a sleeping Clawd moves at a quarter speed. */
 function frameTick(kind: MoodKind, tick: number): number {
-  return isAsleep(kind) ? Math.floor(tick / 4) : tick
+  return isAsleep(kind) ? Math.floor(tick / 4) : tick;
 }
 
-const LIMIT_NAMES: Record<string, string> = { five_hour: '5-hour', seven_day: 'weekly' }
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const LIMIT_NAMES: Record<string, string> = { five_hour: '5-hour', seven_day: 'weekly' };
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 /** A reset time, short and local: "3:40 PM" today, "Mon 3:40 PM" on another day. */
 export function formatReset(at: Date, now: Date): string {
-  const hours = at.getHours() % 12 || 12
-  const time = `${hours}:${String(at.getMinutes()).padStart(2, '0')} ${at.getHours() < 12 ? 'AM' : 'PM'}`
-  return at.toDateString() === now.toDateString() ? time : `${DAYS[at.getDay()]} ${time}`
+  const hours = at.getHours() % 12 || 12;
+  const time = `${hours}:${String(at.getMinutes()).padStart(2, '0')} ${at.getHours() < 12 ? 'AM' : 'PM'}`;
+  return at.toDateString() === now.toDateString() ? time : `${DAYS[at.getDay()]} ${time}`;
 }
 
 /** The window that stopped Claude: the fullest one, or none before the first reading. */
 export function fullestLimit(windows: RateLimit[]): RateLimit | undefined {
-  return [...windows].sort((a, b) => b.percentUsed - a.percentUsed)[0]
+  return [...windows].sort((a, b) => b.percentUsed - a.percentUsed)[0];
 }
 
 // `/pet demo`: every mood in turn, like a short day of work.
-const DEMO_MS = 2_000
-const DEMO_ORDER: MoodKind[] = ['idle', 'thinking', 'reading', 'editing', 'searching', 'running', 'web', 'subagent', 'waiting', 'passed', 'failed', 'committed', 'happy', 'error', 'sleeping']
+const DEMO_MS = 2_000;
+const DEMO_ORDER: MoodKind[] = [
+  'idle',
+  'thinking',
+  'reading',
+  'editing',
+  'searching',
+  'running',
+  'web',
+  'subagent',
+  'waiting',
+  'passed',
+  'failed',
+  'committed',
+  'happy',
+  'error',
+  'sleeping',
+];
 // The demo's moods still to show; any other mood change ends the demo.
-let demoQueue: MoodKind[] = []
+let demoQueue: MoodKind[] = [];
 
 async function setMood($: EngineInterface, kind: MoodKind, detail = '', forMs = 0, then: MoodKind = 'idle') {
-  demoQueue = []
-  lastKind = kind
-  const now = await $.clock.now()
-  await update($, mood, () => ({ kind, detail, since: now, until: forMs ? now + forMs : 0, then }))
+  demoQueue = [];
+  lastKind = kind;
+  const now = await $.clock.now();
+  await update($, mood, () => ({ kind, detail, since: now, until: forMs ? now + forMs : 0, then }));
 }
 
 async function nextDemoMood($: EngineInterface) {
-  const [kind = 'idle', ...rest] = demoQueue
-  const step = DEMO_ORDER.length - rest.length
-  await setMood($, kind, `demo ${step}/${DEMO_ORDER.length}`, DEMO_MS)
-  demoQueue = rest
+  const [kind = 'idle', ...rest] = demoQueue;
+  const step = DEMO_ORDER.length - rest.length;
+  await setMood($, kind, `demo ${step}/${DEMO_ORDER.length}`, DEMO_MS);
+  demoQueue = rest;
 }
 
 /** Shows what Clawd is doing now: the latest running call, else thinking. */
 async function settle($: EngineInterface, running: Map<number, { kind: MoodKind; detail: string }>) {
-  const back = [...running.values()].at(-1)
-  if (back) await setMood($, back.kind, back.detail)
-  else await setMood($, 'thinking')
+  const back = [...running.values()].at(-1);
+  if (back) await setMood($, back.kind, back.detail);
+  else await setMood($, 'thinking');
 }
 
-export const register: Register = on => {
+export const register: Register = (on) => {
   // The band's id, learned when it first draws; the timer repaints it in place.
-  let bandId: string | undefined
-  let tick = 0
+  let bandId: string | undefined;
+  let tick = 0;
   // The cells the band shows now, so a frame that changes nothing is not sent.
-  let lastCells = ''
+  let lastCells = '';
   // Main-thread tool calls still running, by call, with the mood each shows.
   // When one ends, Clawd goes back to a call still running instead of thinking.
-  const running = new Map<number, { kind: MoodKind; detail: string }>()
-  let nextCallId = 0
+  const running = new Map<number, { kind: MoodKind; detail: string }>();
+  let nextCallId = 0;
   // Whether the main thread's last event was a tool call ending. A turn that
   // ends there got no answer (the user denied the tool, or stopped it), so
   // Clawd doesn't cheer.
-  let isEndedOnTool = false
+  let isEndedOnTool = false;
   // `/pet hour` fakes the hour until this time, for previews.
-  let fakeHour = 0
-  let fakeHourUntil = 0
-  const hourNow = (now: number) => (now < fakeHourUntil ? fakeHour : new Date(now).getHours())
+  let fakeHour = 0;
+  let fakeHourUntil = 0;
+  const hourNow = (now: number) => (now < fakeHourUntil ? fakeHour : new Date(now).getHours());
 
   on('session.start', async ($, e, next) => {
-    await setMood($, 'idle')
+    await setMood($, 'idle');
     // `/pet off` lasts across sessions until `/pet on`.
     // A store that can't be read leaves Clawd on.
-    isOffNow = (await $.store.get('isOff').catch(() => false)) === true
-    await update($, isOff, () => isOffNow)
+    isOffNow = (await $.store.get('isOff').catch(() => false)) === true;
+    await update($, isOff, () => isOffNow);
     await $.command.register({
       name: 'pet',
-      description: 'Preview a pet mood: /pet <mood> [seconds], /pet demo, /pet context <percent>, /pet hour <0-23>, or /pet off | on. No mood lists them.',
-    })
+      description:
+        'Preview a pet mood: /pet <mood> [seconds], /pet demo, /pet context <percent>, /pet hour <0-23>, or /pet off | on. No mood lists them.',
+    });
     $.clock.every(FRAME_MS, () => {
       void (async () => {
-        tick += 1
+        tick += 1;
         // Nothing to paint until the band has drawn once (never, on the desktop),
         // and a sleeping Clawd paints once a second.
-        if (bandId === undefined || isOffNow) return
-        if (isAsleep(lastKind) && tick % 4 !== 0) return
-        let current = await read($, mood)
-        const now = await $.clock.now()
+        if (bandId === undefined || isOffNow) return;
+        if (isAsleep(lastKind) && tick % 4 !== 0) return;
+        let current = await read($, mood);
+        const now = await $.clock.now();
         if (current.until && now > current.until) {
-          await (demoQueue.length > 0 ? nextDemoMood($) : current.then === 'thinking' ? settle($, running) : setMood($, current.then))
-          current = await read($, mood)
+          await (demoQueue.length > 0
+            ? nextDemoMood($)
+            : current.then === 'thinking'
+              ? settle($, running)
+              : setMood($, current.then));
+          current = await read($, mood);
         } else if (current.kind === 'idle' && now - current.since > SLEEP_AFTER_MS) {
-          await setMood($, 'sleeping')
-          current = await read($, mood)
+          await setMood($, 'sleeping');
+          current = await read($, mood);
         }
-        const cells = encode(drawFrame(current.kind, frameTick(current.kind, tick), (await read($, context)) ?? 0, hourNow(now)))
-        if (cells === lastCells) return
-        lastCells = cells
-        await $.ui.blit({ requestId: bandId, key: 'pet', cells })
+        const cells = encode(
+          drawFrame(current.kind, frameTick(current.kind, tick), (await read($, context)) ?? 0, hourNow(now)),
+        );
+        if (cells === lastCells) return;
+        lastCells = cells;
+        await $.ui.blit({ requestId: bandId, key: 'pet', cells });
         // A frame that fails (the band closing mid-repaint) is skipped; the next one tries again.
-      })().catch(() => undefined)
-    })
-    return next(e)
-  })
+      })().catch(() => undefined);
+    });
+    return next(e);
+  });
 
   on('command.run', { command: 'pet' }, async ($, e) => {
-    const [typed = '', value = ''] = e.args.trim().split(/\s+/)
+    const [typed = '', value = ''] = e.args.trim().split(/\s+/);
     if (typed === 'off' || typed === 'on') {
-      isOffNow = typed === 'off'
-      await update($, isOff, () => isOffNow)
-      await $.store.set('isOff', isOffNow)
-      return { text: isOffNow ? 'Clawd is off. Run /pet on to bring it back.' : 'Clawd is back.' }
+      isOffNow = typed === 'off';
+      await update($, isOff, () => isOffNow);
+      await $.store.set('isOff', isOffNow);
+      return { text: isOffNow ? 'Clawd is off. Run /pet on to bring it back.' : 'Clawd is back.' };
     }
-    if (isOffNow) return { text: 'Clawd is off. Run /pet on first.' }
+    if (isOffNow) return { text: 'Clawd is off. Run /pet on first.' };
     if (typed === 'hour') {
-      fakeHour = Math.min(23, Math.max(0, Math.floor(Number(value) || 0)))
-      fakeHourUntil = (await $.clock.now()) + 10_000
-      return { text: `Pretending it's ${fakeHour}:00 for 10s.` }
+      fakeHour = Math.min(23, Math.max(0, Math.floor(Number(value) || 0)));
+      fakeHourUntil = (await $.clock.now()) + 10_000;
+      return { text: `Pretending it's ${fakeHour}:00 for 10s.` };
     }
     if (typed === 'demo') {
-      demoQueue = [...DEMO_ORDER]
-      await nextDemoMood($)
-      return { text: `Playing all ${DEMO_ORDER.length} moods, ${DEMO_MS / 1000}s each.` }
+      demoQueue = [...DEMO_ORDER];
+      await nextDemoMood($);
+      return { text: `Playing all ${DEMO_ORDER.length} moods, ${DEMO_MS / 1000}s each.` };
     }
     if (typed === 'context') {
-      const percent = Math.min(100, Math.max(0, Number(value) || 0))
-      await update($, context, () => percent)
-      return { text: `Context set to ${percent}% until the next measure.` }
+      const percent = Math.min(100, Math.max(0, Number(value) || 0));
+      await update($, context, () => percent);
+      return { text: `Context set to ${percent}% until the next measure.` };
     }
-    const name = typed === 'helper' ? 'subagent' : typed
-    const kinds = Object.keys(MOODS) as MoodKind[]
+    const name = typed === 'helper' ? 'subagent' : typed;
+    const kinds = Object.keys(MOODS) as MoodKind[];
     if (!kinds.includes(name as MoodKind)) {
-      const list = kinds.map(k => (k === 'subagent' ? 'subagent (or helper)' : k)).join(', ')
-      return { text: `Moods: ${list}. Usage: /pet <mood> [seconds], /pet demo, /pet context <percent>, /pet hour <0-23>, or /pet off | on` }
+      const list = kinds.map((k) => (k === 'subagent' ? 'subagent (or helper)' : k)).join(', ');
+      return {
+        text: `Moods: ${list}. Usage: /pet <mood> [seconds], /pet demo, /pet context <percent>, /pet hour <0-23>, or /pet off | on`,
+      };
     }
-    const seconds = Math.max(1, Number(value) || 10)
-    await setMood($, name as MoodKind, 'preview', seconds * 1000)
-    return { text: `Showing ${name} for ${seconds}s.` }
-  })
+    const seconds = Math.max(1, Number(value) || 10);
+    await setMood($, name as MoodKind, 'preview', seconds * 1000);
+    return { text: `Showing ${name} for ${seconds}s.` };
+  });
 
   // Context fill: Clawd's battery drains, and one toast when it passes CONTEXT_WARN.
   on('session.measure', async ($, e, next) => {
-    const percent = e.context.percent ?? null
-    await update($, context, () => percent)
+    const percent = e.context.percent ?? null;
+    await update($, context, () => percent);
     if (percent !== null && percent >= CONTEXT_WARN && !(await read($, hasWarned))) {
-      await update($, hasWarned, () => true)
-      $.ui.toast(`Clawd is getting tired: context is ${percent}% full. Run /compact soon.`)
+      await update($, hasWarned, () => true);
+      $.ui.toast(`Clawd is getting tired: context is ${percent}% full. Run /compact soon.`);
     } else if (percent !== null && percent < CONTEXT_WARN) {
-      await update($, hasWarned, () => false)
+      await update($, hasWarned, () => false);
     }
     // Plan usage: one toast per window each time it climbs past LIMIT_WARN.
-    const windows = e.rateLimits.map(({ kind, percentUsed, resetsAt }) => ({ kind, percentUsed, resetsAt }))
-    await update($, limits, () => windows)
-    const warned = await read($, limitsWarned)
-    const now = new Date(await $.clock.now())
+    const windows = e.rateLimits.map(({ kind, percentUsed, resetsAt }) => ({ kind, percentUsed, resetsAt }));
+    await update($, limits, () => windows);
+    const warned = await read($, limitsWarned);
+    const now = new Date(await $.clock.now());
     for (const w of windows) {
-      if (w.percentUsed < LIMIT_WARN || warned.includes(w.kind)) continue
-      const resets = w.resetsAt ? `, resets ${formatReset(new Date(w.resetsAt), now)}` : ''
-      $.ui.toast(`Clawd is running low: ${Math.floor(w.percentUsed)}% of your ${LIMIT_NAMES[w.kind] ?? w.kind} limit used${resets}.`)
+      if (w.percentUsed < LIMIT_WARN || warned.includes(w.kind)) continue;
+      const resets = w.resetsAt ? `, resets ${formatReset(new Date(w.resetsAt), now)}` : '';
+      $.ui.toast(
+        `Clawd is running low: ${Math.floor(w.percentUsed)}% of your ${LIMIT_NAMES[w.kind] ?? w.kind} limit used${resets}.`,
+      );
     }
-    await update($, limitsWarned, () => windows.filter(w => w.percentUsed >= LIMIT_WARN).map(w => w.kind))
-    return next(e)
-  })
+    await update($, limitsWarned, () => windows.filter((w) => w.percentUsed >= LIMIT_WARN).map((w) => w.kind));
+    return next(e);
+  });
 
   // A turn stopped by the plan's limit: Clawd rests until the window resets.
   on('classic.StopFailure', async ($, e, next) => {
     if (e.agent_id === undefined && e.error === 'rate_limit') {
-      const now = await $.clock.now()
-      const resetsAt = fullestLimit(await read($, limits))?.resetsAt
-      const at = resetsAt ? Date.parse(resetsAt) : NaN
-      if (at > now) await setMood($, 'resting', `until ${formatReset(new Date(at), new Date(now))}`, at - now)
-      else await setMood($, 'resting')
+      const now = await $.clock.now();
+      const resetsAt = fullestLimit(await read($, limits))?.resetsAt;
+      const at = resetsAt ? Date.parse(resetsAt) : NaN;
+      if (at > now) await setMood($, 'resting', `until ${formatReset(new Date(at), new Date(now))}`, at - now);
+      else await setMood($, 'resting');
     }
-    return next(e)
-  })
+    return next(e);
+  });
 
   on('turn.start', async ($, e, next) => {
     // Calls that never ended must not keep Clawd busy.
-    running.clear()
-    isEndedOnTool = false
-    await setMood($, 'thinking')
-    return next(e)
-  })
+    running.clear();
+    isEndedOnTool = false;
+    await setMood($, 'thinking');
+    return next(e);
+  });
 
   on('turn.step', async function* ($, e, next) {
-    if (e.agentId === undefined) isEndedOnTool = false
-    return yield* next(e)
-  })
+    if (e.agentId === undefined) isEndedOnTool = false;
+    return yield* next(e);
+  });
 
   on('tool.call', async ($, e, next) => {
     // A subagent's own tools: the pet keeps showing its helper.
-    if (e.agentId !== undefined) return next(e)
+    if (e.agentId !== undefined) return next(e);
 
-    const tool = String(e.tool)
-    const input = e as Record<string, unknown>
-    const callId = nextCallId++
-    const shown = { kind: moodForTool(tool), detail: detailForTool(input) }
-    running.set(callId, shown)
-    await setMood($, shown.kind, shown.detail)
-    let result
+    const tool = String(e.tool);
+    const input = e as Record<string, unknown>;
+    const callId = nextCallId++;
+    const shown = { kind: moodForTool(tool), detail: detailForTool(input) };
+    running.set(callId, shown);
+    await setMood($, shown.kind, shown.detail);
+    let result;
     try {
-      result = await next(e)
+      result = await next(e);
     } finally {
-      running.delete(callId)
+      running.delete(callId);
     }
-    isEndedOnTool = true
-    const command = typeof input.command === 'string' ? input.command : ''
-    const isRan = moodForTool(tool) === 'running' && result.deny === undefined
+    isEndedOnTool = true;
+    const command = typeof input.command === 'string' ? input.command : '';
+    const isRan = moodForTool(tool) === 'running' && result.deny === undefined;
     if (isRan && result.isError !== true && isCommitCommand(command)) {
-      await setMood($, 'committed', commitMessage(command) || 'git commit', SHORT_MOOD_MS, 'thinking')
+      await setMood($, 'committed', commitMessage(command) || 'git commit', SHORT_MOOD_MS, 'thinking');
     } else if (isRan && isCheckCommand(command)) {
-      const passed = checkPassed(result.isError === true, typeof result.text === 'string' ? result.text : '')
-      await setMood($, passed ? 'passed' : 'failed', detailForTool(input), SHORT_MOOD_MS, 'thinking')
+      const passed = checkPassed(result.isError === true, typeof result.text === 'string' ? result.text : '');
+      await setMood($, passed ? 'passed' : 'failed', detailForTool(input), SHORT_MOOD_MS, 'thinking');
     } else if (result.isError || result.deny !== undefined) {
-      await setMood($, 'error', tool, SHORT_MOOD_MS, 'thinking')
+      await setMood($, 'error', tool, SHORT_MOOD_MS, 'thinking');
     } else {
-      await settle($, running)
+      await settle($, running);
     }
-    return result
-  })
+    return result;
+  });
 
   on('turn.complete', async ($, e, next) => {
     if (e.agentId === undefined) {
-      const current = await read($, mood)
+      const current = await read($, mood);
       if (current.kind === 'resting') {
         // Stopped by the plan's limit: Clawd keeps resting.
-      } else if (current.kind === 'passed' || current.kind === 'failed' || current.kind === 'committed' || (isEndedOnTool && current.kind === 'error')) {
+      } else if (
+        current.kind === 'passed' ||
+        current.kind === 'failed' ||
+        current.kind === 'committed' ||
+        (isEndedOnTool && current.kind === 'error')
+      ) {
         // A check, commit, or refused tool that ends the turn stays up instead of the cheer, for its full time.
-        await setMood($, current.kind, current.detail, SHORT_MOOD_MS)
-      } else if (e.reason === 'answer' && !isEndedOnTool) await setMood($, 'happy', '', SHORT_MOOD_MS)
-      else if (e.reason === 'answer' || e.reason === 'aborted') await setMood($, 'idle')
-      else await setMood($, 'error', e.reason, SHORT_MOOD_MS)
+        await setMood($, current.kind, current.detail, SHORT_MOOD_MS);
+      } else if (e.reason === 'answer' && !isEndedOnTool) await setMood($, 'happy', '', SHORT_MOOD_MS);
+      else if (e.reason === 'answer' || e.reason === 'aborted') await setMood($, 'idle');
+      else await setMood($, 'error', e.reason, SHORT_MOOD_MS);
     }
-    return next(e)
-  })
+    return next(e);
+  });
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     // Raster is terminal only; elsewhere leave the band to the engine.
-    if (e.props.hasSurvey || e.surface !== 'terminal' || (await read($, isOff))) return next(e)
+    if (e.props.hasSurvey || e.surface !== 'terminal' || (await read($, isOff))) return next(e);
 
-    bandId = e.requestId
-    const current = await read($, mood)
-    const percent = (await read($, context)) ?? 0
-    const hour = hourNow(await $.clock.now())
-    const { Box, Raster, Text } = $.ui.resolve(e)
-    const contextColor = percent >= CONTEXT_WARN ? 'red' : percent >= 65 ? 'yellow' : 'green'
-    const cells = encode(drawFrame(current.kind, frameTick(current.kind, tick), percent, hour))
-    lastCells = cells
+    bandId = e.requestId;
+    const current = await read($, mood);
+    const percent = (await read($, context)) ?? 0;
+    const hour = hourNow(await $.clock.now());
+    const { Box, Raster, Text } = $.ui.resolve(e);
+    const contextColor = percent >= CONTEXT_WARN ? 'red' : percent >= 65 ? 'yellow' : 'green';
+    const cells = encode(drawFrame(current.kind, frameTick(current.kind, tick), percent, hour));
+    lastCells = cells;
 
     return (
       <Box flexDirection="row" alignItems="center" marginTop={1}>
@@ -371,6 +413,6 @@ export const register: Register = on => {
           {percent >= CONTEXT_SHOW ? <Text color={contextColor}>context {percent}%</Text> : null}
         </Box>
       </Box>
-    )
-  })
-}
+    );
+  });
+};

@@ -39,6 +39,16 @@ jobs:
           test -f plugins/pet/.claude-plugin/types/claude-code/index.d.ts
           npx -y -p typescript@7.0.2 tsc -p ./plugins/pet --noEmit
 
+      - name: Install the lint and format tools
+        run: npm ci
+
+      # Typed linting also needs the plugin API's types written above.
+      - name: Lint
+        run: npm run lint
+
+      - name: Check the formatting
+        run: npm run format:check
+
       - name: Check the mood images match the sprites
         run: |
           node scripts/render-moods.mjs
