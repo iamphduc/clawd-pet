@@ -2,6 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Mood, MoodKind, RateLimit } from '../types'
+import { MOODS } from './moods/index.ts'
 import { COLUMNS, ROWS, drawFrame, encode } from './sprites'
 
 const FRAME_MS = 250
@@ -26,25 +27,6 @@ const hasWarned = atom({ plugin: 'pet', key: 'hasWarned' } as const, false)
 const isOff = atom({ plugin: 'pet', key: 'isOff' } as const, false)
 const limits = atom({ plugin: 'pet', key: 'limits' } as const, [] as RateLimit[])
 const limitsWarned = atom({ plugin: 'pet', key: 'limitsWarned' } as const, [] as string[])
-
-const LABELS: Record<MoodKind, string> = {
-  idle: 'chilling',
-  sleeping: 'sleeping',
-  thinking: 'thinking',
-  reading: 'reading',
-  editing: 'editing',
-  searching: 'searching',
-  running: 'running',
-  web: 'browsing',
-  subagent: 'with a helper',
-  waiting: 'needs you',
-  passed: 'checks passed!',
-  failed: 'checks failed',
-  committed: 'committed!',
-  resting: 'resting',
-  happy: 'done!',
-  error: 'oops',
-}
 
 export function moodForTool(tool: string): MoodKind {
   if (tool === 'Read') return 'reading'
@@ -127,7 +109,7 @@ let isOffNow = false
 
 /** Whether a mood is a sleeping Clawd, which moves at a quarter speed. */
 function isAsleep(kind: MoodKind): boolean {
-  return kind === 'sleeping' || kind === 'resting'
+  return MOODS[kind].slow === true
 }
 
 /** The animation step for a frame: a sleeping Clawd moves at a quarter speed. */
@@ -257,7 +239,7 @@ export const register: Register = on => {
       return { text: `Context set to ${percent}% until the next measure.` }
     }
     const name = typed === 'helper' ? 'subagent' : typed
-    const kinds = Object.keys(LABELS) as MoodKind[]
+    const kinds = Object.keys(MOODS) as MoodKind[]
     if (!kinds.includes(name as MoodKind)) {
       const list = kinds.map(k => (k === 'subagent' ? 'subagent (or helper)' : k)).join(', ')
       return { text: `Moods: ${list}. Usage: /pet <mood> [seconds], /pet demo, /pet context <percent>, /pet hour <0-23>, or /pet off | on` }
@@ -380,7 +362,7 @@ export const register: Register = on => {
       <Box flexDirection="row" alignItems="center" marginTop={1}>
         <Raster key="pet" columns={COLUMNS} rows={ROWS} cells={cells} />
         <Box flexDirection="column" marginLeft={1}>
-          <Text bold>{LABELS[current.kind]}</Text>
+          <Text bold>{MOODS[current.kind].label}</Text>
           {current.detail ? (
             <Text dimColor wrap="truncate-end">
               {current.detail}

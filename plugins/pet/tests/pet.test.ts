@@ -2,10 +2,11 @@ import { describe, expect, mock, test } from 'claude-code/testing'
 import type { TestBody } from 'claude-code/testing'
 
 import type { MoodKind } from '../types'
+import { MOODS } from '../hooks/moods/index.ts'
 import { checkPassed, commitMessage, detailForTool, formatReset, fullestLimit, isCheckCommand, isCommitCommand, moodForTool } from '../hooks/register'
 import { COLUMNS, ROWS, drawFrame, encode } from '../hooks/sprites'
 
-const KINDS: MoodKind[] = ['idle', 'sleeping', 'thinking', 'reading', 'editing', 'searching', 'running', 'web', 'subagent', 'waiting', 'passed', 'failed', 'happy', 'error', 'committed', 'resting']
+const KINDS = Object.keys(MOODS) as MoodKind[]
 
 test('every mood draws a full raster on every tick', async () => {
   for (const kind of KINDS) {

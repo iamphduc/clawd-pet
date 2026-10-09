@@ -1,3 +1,6 @@
 {
-  "extends": "./.claude-plugin/types/tsconfig.json"
+  "extends": "./.claude-plugin/types/tsconfig.json",
+  // The sprite modules import each other with .ts endings so plain Node can
+  // load them for scripts/render-moods.mjs.
+  "compilerOptions": { "allowImportingTsExtensions": true }
 }
