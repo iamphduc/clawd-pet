@@ -2,7 +2,7 @@
 
 Clawd, the Claude Code mascot, lives in the band above your prompt and acts out what Claude is doing. When you run several sessions side by side, a glance tells you which one is working, which one needs you, and which one is done.
 
-<img src="docs/demo.gif" alt="Clawd above the prompt: thinking, editing, running tests, cheering when they pass, waving when Claude needs you, then done" width="588">
+<img src="docs/demo.gif" alt="Clawd above the prompt: thinking, editing, running tests, cheering when they pass, waving, then done" width="588">
 
 This is an unofficial fan project, not affiliated with or endorsed by Anthropic.
 
@@ -17,7 +17,7 @@ This is an unofficial fan project, not affiliated with or endorsed by Anthropic.
 | Running a command | Hops beside a rocket as stars stream past it. | <img src="docs/moods/running.png" alt="Clawd running a command" width="248"> |
 | Browsing the web | Hops beside a browser window as a page loads. | <img src="docs/moods/web.png" alt="Clawd browsing" width="248"> |
 | Running a subagent | Brings a small helper Clawd. | <img src="docs/moods/subagent.png" alt="Clawd with a helper" width="248"> |
-| Waiting for you | Waves beside a bouncing "?" while Claude asks you a question. Permission prompts and MCP dialogs cover the band, so Clawd doesn't react to them. | <img src="docs/moods/waiting.png" alt="Clawd waving" width="248"> |
+| Waiting for you | Any prompt from Claude (a question, a permission prompt, or an MCP dialog) covers the band, so you see the prompt instead of Clawd. Run `/pet waiting` to see Clawd wave beside a bouncing "?". | <img src="docs/moods/waiting.png" alt="Clawd waving" width="248"> |
 | Running tests or a build that passes | Hops with happy eyes as a green check draws itself. | <img src="docs/moods/passed.png" alt="Clawd after passing checks" width="248"> |
 | Running tests or a build that fails | Squashes down with closed eyes beside a red X. | <img src="docs/moods/failed.png" alt="Clawd after failing checks" width="248"> |
 | Making a git commit | Cheers with "committed!" and the commit message. | <img src="docs/moods/happy.png" alt="Clawd cheering a commit" width="248"> |
