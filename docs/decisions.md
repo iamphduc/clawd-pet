@@ -1,7 +1,9 @@
 # Design decisions
 
 This page records choices that might look like mistakes, and why they're on
-purpose. Read the art sections before you change `plugins/pet/hooks/sprites.ts`.
+purpose. Read the art sections before you change the sprite code: each mood's
+art in `plugins/pet/hooks/moods/`, and the shared drawing tools in
+`plugins/pet/hooks/pixels.ts`.
 
 ## Pixels and cells
 
