@@ -46,12 +46,11 @@ declare const setTimeout: (callback: (...args: never[]) => void, ms: number) => 
 test('the pet reads while Read runs, then goes back to thinking', async ($, on) => {
   mock.clock(on)
   let during: string | undefined
-  let band: Awaited<ReturnType<typeof $.ui.mount<'terminal', 'AbovePrompt'>>> | undefined
   on('tool.call', async () => {
-    during = (await band?.find({ type: 'Text', text: /reading|thinking|chilling/ }))?.text
+    during = (await band.find({ type: 'Text', text: /reading|thinking|chilling/ }))?.text
     return { result: 'ok' }
   })
-  band = await $.ui.mount(BAND)
+  const band = await $.ui.mount(BAND)
 
   await $.tool.call({ tool: 'Read', file_path: '/repo/notes.md' })
 
@@ -97,7 +96,7 @@ test('a check that ends beside a running helper returns to the helper', async ($
   const clock = mock.clock(on)
   on('session.start', async () => ({ cwd: '/repo' }))
   on('command.register', async () => ({ value: {} }) as never)
-  on('ui.blit', async () => ({ value: {} }) as never)
+  on('ui.blit', async () => ({ value: {} }))
   const gates = new Map<string, () => void>()
   on('tool.call', async (_$, e) => {
     const key = String((e as Record<string, unknown>).description)
@@ -154,12 +153,11 @@ test('idle and sleeping draw a battery at any context fill', async () => {
 test('the pet waits while a question is open', async ($, on) => {
   mock.clock(on)
   let during: string | undefined
-  let band: Awaited<ReturnType<typeof $.ui.mount<'terminal', 'AbovePrompt'>>> | undefined
   on('tool.call', async () => {
-    during = (await band?.find({ type: 'Text', text: /needs you|thinking/ }))?.text
+    during = (await band.find({ type: 'Text', text: /needs you|thinking/ }))?.text
     return { result: 'ok' }
   })
-  band = await $.ui.mount(BAND)
+  const band = await $.ui.mount(BAND)
 
   await $.tool.call({ tool: 'AskUserQuestion', questions: [] })
 
@@ -273,7 +271,7 @@ test('a turn that ends on a denied tool does not cheer', async ($, on) => {
   const clock = mock.clock(on)
   on('session.start', async () => ({ cwd: '/repo' }))
   on('command.register', async () => ({ value: {} }) as never)
-  on('ui.blit', async () => ({ value: {} }) as never)
+  on('ui.blit', async () => ({ value: {} }))
   on('tool.call', async () => ({ deny: 'The user said no' }))
   on('turn.complete', async () => ({ text: '' }))
   await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
@@ -291,6 +289,8 @@ test('a turn that ends on a denied tool does not cheer', async ($, on) => {
 test('a turn that answers after its tools still cheers', async ($, on) => {
   mock.clock(on)
   on('tool.call', async () => ({ result: 'ok' }))
+  // The step streams nothing; it only returns its result.
+  // eslint-disable-next-line require-yield
   on('turn.step', async function* () {
     return { turnId: 't1', index: 1, answer: '', toolUses: [] } as never
   })
@@ -299,7 +299,7 @@ test('a turn that answers after its tools still cheers', async ($, on) => {
 
   await $.tool.call({ tool: 'Bash', command: 'ls' })
   // The step streams: read it to the end, like the engine does.
-  for await (const _ of $.turn.step({ turnId: 't1', index: 1, model: 'm', messageCount: 3 } as never)) void _
+  for await (const _ of $.turn.step({ turnId: 't1', index: 1, model: 'm', messageCount: 3 })) void _
   await $.turn.complete({ reason: 'answer', answer: '', durationMs: 1, isAborted: false, turnId: 't1' })
 
   expect(await band.find({ text: 'done!' })).toBeDefined()
@@ -397,7 +397,7 @@ test('/pet demo plays every mood in turn, and a real mood ends it', async ($, on
   const clock = mock.clock(on)
   on('session.start', async () => ({ cwd: '/repo' }))
   on('command.register', async () => ({ value: {} }) as never)
-  on('ui.blit', async () => ({ value: {} }) as never)
+  on('ui.blit', async () => ({ value: {} }))
   on('tool.call', async () => ({ result: 'ok' }))
   await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
   const band = await $.ui.mount(BAND)
@@ -454,9 +454,9 @@ test('a turn stopped by the plan limit makes Clawd rest until the reset', async 
   const clock = mock.clock(on)
   on('session.start', async () => ({ cwd: '/repo' }))
   on('command.register', async () => ({ value: {} }) as never)
-  on('ui.blit', async () => ({ value: {} }) as never)
+  on('ui.blit', async () => ({ value: {} }))
   on('session.measure', async () => ({ changed: ['rateLimits'] }) as never)
-  on('ui.toast', async () => ({ value: undefined }) as never)
+  on('ui.toast', async () => ({ value: undefined }))
   on('classic.StopFailure', async () => ({}))
   on('turn.complete', async () => ({ text: '' }))
   await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })

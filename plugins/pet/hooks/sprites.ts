@@ -34,7 +34,7 @@ function drawBattery(canvas: Canvas, percent: number, y: number) {
  * percent: from 50, an idle or sleeping Clawd shows a draining battery.
  */
 export function drawFrame(kind: MoodKind, tick: number, context = 0, hour = 12): Canvas {
-  const canvas: Canvas = new Array(WIDTH * HEIGHT).fill(null)
+  const canvas: Canvas = new Array<number | null>(WIDTH * HEIGHT).fill(null)
   const mood = MOODS[kind]
   // Night, midnight to 6 a.m.: Clawd wears a nightcap in every mood.
   drawPet(canvas, { ...mood.pose(tick), cap: hour < 6 })

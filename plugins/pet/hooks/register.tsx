@@ -43,7 +43,7 @@ export function moodForTool(tool: string): MoodKind {
 const DETAIL_MAX = 30
 
 export function detailForTool(input: Record<string, unknown>): string {
-  const pick = (key: string) => (typeof input[key] === 'string' ? (input[key] as string) : '')
+  const pick = (key: string) => (typeof input[key] === 'string' ? input[key] : '')
   const path = pick('file_path') || pick('notebook_path')
   if (path) return path.split(/[\\/]/).pop() ?? ''
   // A command's own description ("Run the tests") says more than its first characters.
