@@ -323,6 +323,20 @@ export const register: Register = on => {
     return next(e)
   })
 
+  // An MCP server asks for input (a form or a link): Clawd waves with the
+  // server's name until the user answers.
+  on('classic.Elicitation', async ($, e, next) => {
+    const asking = clip(e.mcp_server_name)
+    prompts.set(`mcp:${e.elicitation_id ?? e.mcp_server_name}`, asking)
+    await setMood($, 'waiting', asking)
+    return next(e)
+  })
+
+  on('classic.ElicitationResult', async ($, e, next) => {
+    if (prompts.delete(`mcp:${e.elicitation_id ?? e.mcp_server_name}`)) await settle($, prompts, running)
+    return next(e)
+  })
+
   // A tool's progress row (the ctrl+b hint) only shows once the tool runs, so
   // while Clawd waits it means the prompt was approved. Drawing can't write
   // state, so the frame timer makes the switch.

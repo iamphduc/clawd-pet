@@ -357,6 +357,45 @@ test("a helper ending keeps the wave for another helper's prompt", async ($, on)
   await second
 })
 
+test('an MCP input dialog makes the pet wave until it is answered', async ($, on) => {
+  mock.clock(on)
+  on('classic.Elicitation', async () => ({}))
+  on('classic.ElicitationResult', async () => ({}))
+  let release = () => {}
+  on('tool.call', async () => {
+    await new Promise<void>(resolve => (release = resolve))
+    return { result: 'ok' }
+  })
+  const band = await $.ui.mount(BAND)
+  const call = $.tool.call({ tool: 'mcp__tracker__create_issue', title: 'x' } as never)
+  await new Promise(resolve => setTimeout(resolve, 0))
+
+  await $.classic.Elicitation({ mcp_server_name: 'tracker', message: 'Pick a project', elicitation_id: 'e1' } as never)
+  expect(await band.find({ type: 'Text', text: 'needs you' })).toBeDefined()
+  expect(await band.find({ type: 'Text', text: 'tracker' })).toBeDefined()
+
+  await $.classic.ElicitationResult({ mcp_server_name: 'tracker', elicitation_id: 'e1', action: 'accept' } as never)
+  expect(await band.find({ type: 'Text', text: 'needs you' })).toBeUndefined()
+  expect(await band.find({ type: 'Text', text: 'thinking' })).toBeDefined()
+
+  release()
+  await call
+})
+
+test('a new turn stops waving for a dialog that never got an answer', async ($, on) => {
+  mock.clock(on)
+  on('classic.Elicitation', async () => ({}))
+  on('turn.start', async (_$, e) => ({ turnId: e.turnId }))
+  const band = await $.ui.mount(BAND)
+
+  await $.classic.Elicitation({ mcp_server_name: 'tracker', message: 'Pick a project', elicitation_id: 'e1' } as never)
+  expect(await band.find({ type: 'Text', text: 'needs you' })).toBeDefined()
+
+  await $.turn.start({ text: 'next', turnId: 't2' })
+  expect(await band.find({ type: 'Text', text: 'needs you' })).toBeUndefined()
+  expect(await band.find({ type: 'Text', text: 'thinking' })).toBeDefined()
+})
+
 describe('the frame timer', () => {
   const start = async (...[$, on]: Parameters<TestBody>) => {
     const clock = mock.clock(on)
