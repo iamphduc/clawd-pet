@@ -31,13 +31,31 @@ Loading the plugin this way also writes the plugin API's types to `plugins/pet/.
 
 ## Check your changes
 
+Install the lint and format tools once:
+
+```bash
+npm install
+```
+
+Then run the checks:
+
 ```bash
 claude plugin validate --strict ./plugins/pet
 claude plugin test ./plugins/pet
 npx -p typescript@7.0.2 tsc -p ./plugins/pet
+npm run lint
+npm run format:check
 ```
 
+To fix formatting, run `npm run format`. Prettier skips Markdown files. ESLint uses the plugin API's types too, so load the plugin once before you lint.
+
 The Check workflow in `.github/workflows/check.yml` runs these on every pull request. It also renders the mood images and fails if they don't match the files in `docs/moods/`. After you change the art, run `node scripts/render-moods.mjs` and commit the images.
+
+To make `git blame` skip formatting-only commits, run this once:
+
+```bash
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
 
 ## Release
 
