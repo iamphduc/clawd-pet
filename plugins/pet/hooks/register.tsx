@@ -187,6 +187,10 @@ export const register: Register = on => {
   // When one ends, Clawd goes back to a call still running instead of thinking.
   const running = new Map<number, { kind: MoodKind; detail: string }>()
   let nextCallId = 0
+  // Whether the main thread's last event was a tool call ending. A turn that
+  // ends there got no answer (the user denied the tool, or stopped it), so
+  // Clawd doesn't cheer.
+  let isEndedOnTool = false
   // `/pet hour` fakes the hour until this time, for previews.
   let fakeHour = 0
   let fakeHourUntil = 0
@@ -302,8 +306,14 @@ export const register: Register = on => {
   on('turn.start', async ($, e, next) => {
     // Calls that never ended must not keep Clawd busy.
     running.clear()
+    isEndedOnTool = false
     await setMood($, 'thinking')
     return next(e)
+  })
+
+  on('turn.step', async function* ($, e, next) {
+    if (e.agentId === undefined) isEndedOnTool = false
+    return yield* next(e)
   })
 
   on('tool.call', async ($, e, next) => {
@@ -322,6 +332,7 @@ export const register: Register = on => {
     } finally {
       running.delete(callId)
     }
+    isEndedOnTool = true
     const command = typeof input.command === 'string' ? input.command : ''
     const isRan = moodForTool(tool) === 'running' && result.deny === undefined
     if (isRan && result.isError !== true && isCommitCommand(command)) {
@@ -345,8 +356,8 @@ export const register: Register = on => {
       } else if (current.kind === 'passed' || current.kind === 'failed' || current.kind === 'committed') {
         // A check or commit that ends the turn stays up instead of the cheer, for its full time.
         await setMood($, current.kind, current.detail, SHORT_MOOD_MS)
-      } else if (e.reason === 'answer') await setMood($, 'happy', '', SHORT_MOOD_MS)
-      else if (e.reason === 'aborted') await setMood($, 'idle')
+      } else if (e.reason === 'answer' && !isEndedOnTool) await setMood($, 'happy', '', SHORT_MOOD_MS)
+      else if (e.reason === 'answer' || e.reason === 'aborted') await setMood($, 'idle')
       else await setMood($, 'error', e.reason, SHORT_MOOD_MS)
     }
     return next(e)

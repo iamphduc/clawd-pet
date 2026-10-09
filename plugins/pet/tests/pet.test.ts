@@ -268,6 +268,36 @@ test('a check result that ends the turn stays instead of the cheer', async ($, o
   expect(await band.find({ text: 'done!' })).toBeUndefined()
 })
 
+test('a turn that ends on a denied tool does not cheer', async ($, on) => {
+  mock.clock(on)
+  on('tool.call', async () => ({ deny: 'The user said no' }))
+  on('turn.complete', async () => ({ text: '' }))
+  const band = await $.ui.mount(BAND)
+
+  await $.tool.call({ tool: 'Bash', command: 'ls' })
+  await $.turn.complete({ reason: 'answer', answer: '', durationMs: 1, isAborted: false, turnId: 't1' })
+
+  expect(await band.find({ text: 'done!' })).toBeUndefined()
+  expect(await band.find({ text: 'chilling' })).toBeDefined()
+})
+
+test('a turn that answers after its tools still cheers', async ($, on) => {
+  mock.clock(on)
+  on('tool.call', async () => ({ result: 'ok' }))
+  on('turn.step', async function* () {
+    return { turnId: 't1', index: 1, answer: '', toolUses: [] } as never
+  })
+  on('turn.complete', async () => ({ text: '' }))
+  const band = await $.ui.mount(BAND)
+
+  await $.tool.call({ tool: 'Bash', command: 'ls' })
+  // The step streams: read it to the end, like the engine does.
+  for await (const _ of $.turn.step({ turnId: 't1', index: 1, model: 'm', messageCount: 3 } as never)) void _
+  await $.turn.complete({ reason: 'answer', answer: '', durationMs: 1, isAborted: false, turnId: 't1' })
+
+  expect(await band.find({ text: 'done!' })).toBeDefined()
+})
+
 test('night adds a cap and morning adds coffee, in every mood', async () => {
   for (const kind of KINDS) {
     for (const hour of [2, 8, 15]) {
