@@ -353,8 +353,8 @@ export const register: Register = on => {
       const current = await read($, mood)
       if (current.kind === 'resting') {
         // Stopped by the plan's limit: Clawd keeps resting.
-      } else if (current.kind === 'passed' || current.kind === 'failed' || current.kind === 'committed') {
-        // A check or commit that ends the turn stays up instead of the cheer, for its full time.
+      } else if (current.kind === 'passed' || current.kind === 'failed' || current.kind === 'committed' || (isEndedOnTool && current.kind === 'error')) {
+        // A check, commit, or refused tool that ends the turn stays up instead of the cheer, for its full time.
         await setMood($, current.kind, current.detail, SHORT_MOOD_MS)
       } else if (e.reason === 'answer' && !isEndedOnTool) await setMood($, 'happy', '', SHORT_MOOD_MS)
       else if (e.reason === 'answer' || e.reason === 'aborted') await setMood($, 'idle')

@@ -269,15 +269,21 @@ test('a check result that ends the turn stays instead of the cheer', async ($, o
 })
 
 test('a turn that ends on a denied tool does not cheer', async ($, on) => {
-  mock.clock(on)
+  const clock = mock.clock(on)
+  on('session.start', async () => ({ cwd: '/repo' }))
+  on('command.register', async () => ({ value: {} }) as never)
+  on('ui.blit', async () => ({ value: {} }) as never)
   on('tool.call', async () => ({ deny: 'The user said no' }))
   on('turn.complete', async () => ({ text: '' }))
+  await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
   const band = await $.ui.mount(BAND)
 
   await $.tool.call({ tool: 'Bash', command: 'ls' })
   await $.turn.complete({ reason: 'answer', answer: '', durationMs: 1, isAborted: false, turnId: 't1' })
 
+  expect(await band.find({ text: 'oops' })).toBeDefined()
   expect(await band.find({ text: 'done!' })).toBeUndefined()
+  await clock.advance(3_500)
   expect(await band.find({ text: 'chilling' })).toBeDefined()
 })
 
