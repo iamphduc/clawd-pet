@@ -535,7 +535,9 @@ test('a turn stopped by the plan limit makes Clawd rest until the reset', async 
   const band = await $.ui.mount(BAND);
 
   const now = clock.now();
-  const resetsAt = new Date(now + 20 * 60_000);
+  // A short window: the frame timer fires every 250 ms of fake time, so a long
+  // wait is slow enough to time out on a slow machine.
+  const resetsAt = new Date(now + 2 * 60_000);
   await measureLimits($, 100, resetsAt.toISOString());
   await $.classic.StopFailure({ error: 'rate_limit' } as never);
   await $.turn.complete({ reason: 'error', answer: '', durationMs: 1, isAborted: false, turnId: 't1' });
@@ -543,6 +545,6 @@ test('a turn stopped by the plan limit makes Clawd rest until the reset', async 
   expect(await band.find({ type: 'Text', text: 'resting' })).toBeDefined();
   expect(await band.find({ type: 'Text', text: `until ${formatReset(resetsAt, new Date(now))}` })).toBeDefined();
   // Once the window resets, Clawd is back.
-  await clock.advance(20 * 60_000 + 1_000);
+  await clock.advance(2 * 60_000 + 1_000);
   expect(await band.find({ type: 'Text', text: 'resting' })).toBeUndefined();
 });
