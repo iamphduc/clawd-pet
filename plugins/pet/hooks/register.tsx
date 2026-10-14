@@ -391,6 +391,13 @@ export const register: Register = (on) => {
     // Raster is terminal only; elsewhere leave the band to the engine.
     if (e.props.hasSurvey || e.surface !== 'terminal' || (await read($, isOff))) return next(e);
 
+    // A band shorter than Clawd would scroll and show a slice of it, so Clawd
+    // hides until there's room. In fullscreen the band gets at most half the
+    // terminal, the prompt's rows included.
+    if (e.props.maxRows < ROWS) {
+      bandId = undefined;
+      return next(e);
+    }
     bandId = e.requestId;
     const current = await read($, mood);
     const percent = (await read($, context)) ?? 0;
@@ -401,7 +408,7 @@ export const register: Register = (on) => {
     lastCells = cells;
 
     return (
-      <Box flexDirection="row" alignItems="center" marginTop={1}>
+      <Box flexDirection="row" alignItems="center" marginTop={e.props.maxRows > ROWS ? 1 : 0}>
         <Raster key="pet" columns={COLUMNS} rows={ROWS} cells={cells} />
         <Box flexDirection="column" marginLeft={1}>
           <Text bold>{MOODS[current.kind].label}</Text>
