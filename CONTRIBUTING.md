@@ -59,4 +59,4 @@ git config blame.ignoreRevsFile .git-blame-ignore-revs
 
 ## Release
 
-`claude plugin update` only fetches a new version number. To ship a change, bump the version in both `plugins/pet/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`. For details, see [docs/decisions.md](docs/decisions.md#release-every-change-you-want-installed).
+`claude plugin update` only fetches a new version number. To ship a change, bump the version in both `plugins/pet/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` in the same PR as the change. For details, see [docs/decisions.md](docs/decisions.md#release-every-change-you-want-installed).
