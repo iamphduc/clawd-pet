@@ -444,6 +444,22 @@ test('/pet off hides Clawd and remembers it; /pet on brings it back', async ($, 
   expect(await band.find({ type: 'Text', text: 'chilling' })).toBeDefined();
 });
 
+test('a band too short for Clawd shows the engine band instead', async ($, on) => {
+  mock.clock(on);
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Text } = $.ui.resolve(e);
+    return h(Text, {}, 'engine band') as never;
+  });
+  const sized = (maxRows: number) => ({ ...BAND, props: { ...BAND.props, maxRows } });
+
+  const short = await $.ui.mount(sized(ROWS - 1));
+  expect(await short.find({ type: 'Text', text: 'chilling' })).toBeUndefined();
+  expect(await short.find({ type: 'Text', text: 'engine band' })).toBeDefined();
+
+  const exact = await $.ui.mount(sized(ROWS));
+  expect(await exact.find({ type: 'Text', text: 'chilling' })).toBeDefined();
+});
+
 test('/pet demo plays every mood in turn, and a real mood ends it', async ($, on) => {
   const clock = mock.clock(on);
   on('session.start', async () => ({ cwd: '/repo' }));
