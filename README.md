@@ -17,6 +17,8 @@ Then start a new session or run `/reload-plugins`.
 
 You need Claude Code in a terminal with 24-bit color and block characters, such as Windows Terminal, iTerm2, kitty, or Ghostty. Clawd is tested on Claude Code 2.1.295. The desktop app doesn't show Clawd.
 
+In fullscreen mode, Claude Code gives the area above the prompt at most half the terminal's height. If that's too short for Clawd, Clawd hides until you make the terminal taller.
+
 ## Moods
 
 | When Claude is... | Clawd... | |
