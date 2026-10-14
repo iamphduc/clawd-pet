@@ -48,6 +48,19 @@ The code that waved for permission prompts (#27) and MCP dialogs (#32) was
 removed in #34, after testing by hand on Claude Code 2.1.295. If a later
 version stops covering the band, that code can come back from git history.
 
+## Hide Clawd when the band is too short
+
+In fullscreen mode, Claude Code gives the band at most half the terminal's
+height, with the prompt's rows included. Clawd needs 6 rows, plus 1 for its top
+margin. A band with fewer rows scrolls and shows only the top of Clawd with an
+"n more" row, which looks broken.
+
+So when the band has fewer than 6 rows, Clawd hides and Claude Code draws the
+band. With exactly 6 rows, Clawd drops its top margin. Cropping Clawd to the
+rows that fit was offered instead, but any partial Clawd looks wrong. A smaller
+Clawd was tried earlier and dropped, because quarter blocks are the finest
+pixels the Raster allows.
+
 ## Release every change you want installed
 
 `claude plugin update` only fetches new code when the version number changes.
