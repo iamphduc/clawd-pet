@@ -51,7 +51,11 @@ version stops covering the band, that code can come back from git history.
 ## Release every change you want installed
 
 `claude plugin update` only fetches new code when the version number changes.
-A merged fix doesn't reach installed copies until a release PR bumps the
-version in both `plugins/pet/.claude-plugin/plugin.json` and
-`.claude-plugin/marketplace.json`, as #33 and #36 did. Use a patch bump for
-fixes and a minor bump when a release adds a feature.
+A merged fix doesn't reach installed copies until the version in both
+`plugins/pet/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`
+goes up. Use a patch bump for fixes and a minor bump when a release adds a
+feature.
+
+Bump the version in the same PR as the change, so one merge ships it. A
+separate release PR, as #33, #36, and #44 were, costs an extra merge and ships
+nothing if it merges before the change does.
