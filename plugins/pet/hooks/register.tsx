@@ -347,7 +347,8 @@ export const register: Register = (on) => {
 
   on('turn.start', async ($, e, next) => {
     // A subagent's run starting leaves the main loop's calls and mood alone.
-    if (e.agentId !== undefined) return next(e);
+    // Older Claude Code, such as 2.1.293 in CI, has no agentId on turn.start, hence the `in`.
+    if ('agentId' in e && e.agentId !== undefined) return next(e);
     isInTurn = true;
     // Calls that never ended must not keep Clawd busy.
     running.clear();
