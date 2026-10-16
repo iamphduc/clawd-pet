@@ -47,6 +47,8 @@ npm run lint
 npm run format:check
 ```
 
+CI installs an older Claude Code than you might have, set in `.github/workflows/check.yml`, and type-checks against that version's plugin API. Code that compiles on your newer version can fail there, for example when it reads an event field the older version doesn't have. Write such code so it compiles on both, as `register.tsx` does for `agentId` on `turn.start`.
+
 To fix formatting, run `npm run format`. Prettier skips Markdown files. ESLint uses the plugin API's types too, so load the plugin once before you lint.
 
 The Check workflow in `.github/workflows/check.yml` runs these on every pull request. It also renders the mood images and fails if they don't match the files in `docs/moods/`. After you change the art, run `node scripts/render-moods.mjs` and commit the images.

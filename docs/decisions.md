@@ -37,6 +37,18 @@ it looks chunky. The following versions were tried and rejected:
 The Raster that draws Clawd accepts only characters in the Basic Multilingual
 Plane, so finer pixels such as sextants and octants aren't available.
 
+## Keep the nightcap's floppy tip
+
+The nightcap rises above the head, and its tip flops down the right side to a
+pom-pom. This shape was chosen in #48 from several options.
+
+The cap before #48 was flat, hugged the head, and had stripes, so it looked like
+a pirate's bandana. The following versions were tried and rejected:
+
+- A cone pointing up and right, with the pom-pom on the tip
+- The same cone with light stripes
+- A tall cap leaning right, with a small pom-pom on top
+
 ## Don't wave for prompts
 
 Every prompt from Claude covers the band: questions, permission prompts, and
