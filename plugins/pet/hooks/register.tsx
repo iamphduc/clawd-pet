@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code';
-import type { EngineInterface, Register } from 'claude-code';
+import type { AgentStatus, EngineInterface, Register } from 'claude-code';
 
 import type { Mood, MoodKind, RateLimit } from '../types';
 import { MOODS } from './moods/index.ts';
@@ -8,6 +8,8 @@ import { COLUMNS, ROWS, drawFrame, encode } from './sprites';
 const FRAME_MS = 250;
 const SLEEP_AFTER_MS = 60_000;
 const SHORT_MOOD_MS = 3_000;
+// How often Clawd checks whether the helpers it waits on are done.
+const HELPERS_CHECK_MS = 2_000;
 // Context use, in percent, at which Clawd shows its battery and then warns.
 const CONTEXT_SHOW = 50;
 const CONTEXT_WARN = 80;
@@ -178,6 +180,19 @@ async function nextDemoMood($: EngineInterface) {
   demoQueue = rest;
 }
 
+// Agent states that mean a helper is still at work.
+const BUSY: AgentStatus[] = ['pending', 'running', 'waiting'];
+
+/** How many subagents are still working; teammates, who idle between messages, don't count. */
+async function busyHelpers($: EngineInterface): Promise<number> {
+  const agents = await $.agent.list().catch(() => []);
+  return agents.filter((a) => a.teammateId === undefined && BUSY.includes(a.status)).length;
+}
+
+function helpersDetail(count: number): string {
+  return count === 1 ? '1 still working' : `${count} still working`;
+}
+
 /** Shows what Clawd is doing now: the latest running call, else thinking. */
 async function settle($: EngineInterface, running: Map<number, { kind: MoodKind; detail: string }>) {
   const back = [...running.values()].at(-1);
@@ -199,6 +214,9 @@ export const register: Register = (on) => {
   // ends there got no answer (the user denied the tool, or stopped it), so
   // Clawd doesn't cheer.
   let isEndedOnTool = false;
+  // Whether the main loop is in a turn. Between turns, Clawd stays with its
+  // helpers while background subagents still work, instead of going to sleep.
+  let isInTurn = false;
   // `/pet hour` fakes the hour until this time, for previews.
   let fakeHour = 0;
   let fakeHourUntil = 0;
@@ -230,6 +248,11 @@ export const register: Register = (on) => {
             : current.then === 'thinking'
               ? settle($, running)
               : setMood($, current.then));
+          current = await read($, mood);
+        } else if (!isInTurn && current.kind === 'subagent' && tick % (HELPERS_CHECK_MS / FRAME_MS) === 0) {
+          const count = await busyHelpers($);
+          if (count === 0) await setMood($, 'idle');
+          else if (helpersDetail(count) !== current.detail) await setMood($, 'subagent', helpersDetail(count));
           current = await read($, mood);
         } else if (current.kind === 'idle' && now - current.since > SLEEP_AFTER_MS) {
           await setMood($, 'sleeping');
@@ -323,6 +346,9 @@ export const register: Register = (on) => {
   });
 
   on('turn.start', async ($, e, next) => {
+    // A subagent's run starting leaves the main loop's calls and mood alone.
+    if (e.agentId !== undefined) return next(e);
+    isInTurn = true;
     // Calls that never ended must not keep Clawd busy.
     running.clear();
     isEndedOnTool = false;
@@ -369,7 +395,9 @@ export const register: Register = (on) => {
 
   on('turn.complete', async ($, e, next) => {
     if (e.agentId === undefined) {
+      isInTurn = false;
       const current = await read($, mood);
+      const helpers = await busyHelpers($);
       if (current.kind === 'resting') {
         // Stopped by the plan's limit: Clawd keeps resting.
       } else if (
@@ -380,6 +408,9 @@ export const register: Register = (on) => {
       ) {
         // A check, commit, or refused tool that ends the turn stays up instead of the cheer, for its full time.
         await setMood($, current.kind, current.detail, SHORT_MOOD_MS);
+      } else if (helpers > 0 && (e.reason === 'answer' || e.reason === 'aborted')) {
+        // Background subagents still work after the answer: Clawd stays with them.
+        await setMood($, 'subagent', helpersDetail(helpers));
       } else if (e.reason === 'answer' && !isEndedOnTool) await setMood($, 'happy', '', SHORT_MOOD_MS);
       else if (e.reason === 'answer' || e.reason === 'aborted') await setMood($, 'idle');
       else await setMood($, 'error', e.reason, SHORT_MOOD_MS);
