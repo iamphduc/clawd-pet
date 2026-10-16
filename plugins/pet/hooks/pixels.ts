@@ -88,16 +88,16 @@ export function drawPet(
   const y = HEIGHT - art.length - lift;
   stamp(canvas, art, 0, y);
   if (cap) {
-    // A striped nightcap on the head, its tip flopping down the right side to a pom-pom.
+    // A puffy nightcap rising above the head, its tip flopping down the right side to a pom-pom.
     // prettier-ignore
     stamp(canvas, [
-      '..BBBBBBBBBBBBBBBBBBBB..........',
-      'BBccBBccBBccBBccBBccBBccBBcc....',
-      'wwwwwwwwwwwwwwwwwwwwwwwwccBBcc..',
-      '..........................BBccBB',
+      '......BBBBBBBBBBBBBBBBBB........',
+      '..BBBBBBBBBBBBBBBBBBBBBBBBBB....',
+      'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB..',
+      '..wwwwwwwwwwwwwwwwwwwwwwww..BBBB',
       '............................wwww',
       '............................wwww',
-    ], 6, y - 1)
+    ], 4, y - 2)
   }
   if (wave) {
     // Wave the right arm: it rises to a short diagonal, then rests.
