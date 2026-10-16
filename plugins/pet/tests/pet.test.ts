@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from 'claude-code/testing';
+import type { AgentStatus } from 'claude-code';
 import type { TestBody } from 'claude-code/testing';
 
 import type { MoodKind } from '../types';
@@ -330,6 +331,36 @@ test('a turn that ends on a denied tool does not cheer', async ($, on) => {
   expect(await band.find({ text: 'oops' })).toBeDefined();
   expect(await band.find({ text: 'done!' })).toBeUndefined();
   await clock.advance(3_500);
+  expect(await band.find({ text: 'chilling' })).toBeDefined();
+});
+
+test('the pet stays with background helpers after the answer, then rests when they finish', async ($, on) => {
+  const clock = mock.clock(on);
+  on('session.start', async () => ({ cwd: '/repo' }));
+  on('command.register', async () => ({ value: {} }) as never);
+  on('ui.blit', async () => ({ value: {} }));
+  on('turn.start', async (_$, e) => ({ turnId: e.turnId }));
+  on('turn.complete', async () => ({ text: '' }));
+  let status: AgentStatus = 'running';
+  on('agent.list', async () => ({
+    value: [
+      { id: 'a1', description: 'scan', type: 'Explore', status },
+      { id: 't1', description: 'mate', type: 'teammate', teammateId: 'mate@team', status: 'running' },
+    ],
+  }));
+  await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true });
+  const band = await $.ui.mount(BAND);
+
+  await $.turn.start({ text: 'go', turnId: 't1' });
+  await $.turn.complete({ reason: 'answer', answer: 'started', durationMs: 1, isAborted: false, turnId: 't1' });
+  expect(await band.find({ text: 'with a helper' })).toBeDefined();
+  expect(await band.find({ text: '1 still working' })).toBeDefined();
+  // Long past the sleep delay, Clawd is still with the helper.
+  await clock.advance(90_000);
+  expect(await band.find({ text: 'with a helper' })).toBeDefined();
+
+  status = 'completed';
+  await clock.advance(2_500);
   expect(await band.find({ text: 'chilling' })).toBeDefined();
 });
 
