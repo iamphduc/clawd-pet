@@ -48,6 +48,21 @@ The code that waved for permission prompts (#27) and MCP dialogs (#32) was
 removed in #34, after testing by hand on Claude Code 2.1.295. If a later
 version stops covering the band, that code can come back from git history.
 
+## Stay with background subagents
+
+A background subagent lets the main turn end right away, while the subagent
+keeps working. If Clawd cheered and then fell asleep, it would look done while
+work was still running.
+
+So when the main turn ends, Clawd asks `$.agent.list()` how many subagents are
+still pending, running, or waiting. If any are, Clawd shows "with a helper"
+with a count. It asks again every 2 seconds and goes idle when none are left.
+Teammates don't count, because they idle between messages.
+
+Clawd polls the engine's list instead of keeping its own count from spawn and
+`turn.complete` events. A count kept in the plugin is lost when the plugin
+reloads, and one missed event would leave Clawd waiting forever.
+
 ## Hide Clawd when the band is too short
 
 In fullscreen mode, Claude Code gives the band at most half the terminal's
