@@ -182,6 +182,8 @@ async function nextDemoMood($: EngineInterface) {
 
 // Agent states that mean a helper is still at work.
 const BUSY: AgentStatus[] = ['pending', 'running', 'waiting'];
+// Moods between turns in which Clawd looks for helpers still at work.
+const BETWEEN_TURNS: MoodKind[] = ['idle', 'sleeping', 'subagent'];
 
 /** How many subagents are still working; teammates, who idle between messages, don't count. */
 async function busyHelpers($: EngineInterface): Promise<number> {
@@ -249,10 +251,17 @@ export const register: Register = (on) => {
               ? settle($, running)
               : setMood($, current.then));
           current = await read($, mood);
-        } else if (!isInTurn && current.kind === 'subagent' && tick % (HELPERS_CHECK_MS / FRAME_MS) === 0) {
+        } else if (
+          !isInTurn &&
+          !current.until &&
+          BETWEEN_TURNS.includes(current.kind) &&
+          tick % (HELPERS_CHECK_MS / FRAME_MS) === 0
+        ) {
+          // An idle or sleeping Clawd checks too: a helper can show up after
+          // the turn ends, or the plugin can reload while one works.
           const count = await busyHelpers($);
-          if (count === 0) await setMood($, 'idle');
-          else if (helpersDetail(count) !== current.detail) await setMood($, 'subagent', helpersDetail(count));
+          if (count > 0 && helpersDetail(count) !== current.detail) await setMood($, 'subagent', helpersDetail(count));
+          else if (count === 0 && current.kind === 'subagent') await setMood($, 'idle');
           current = await read($, mood);
         } else if (current.kind === 'idle' && now - current.since > SLEEP_AFTER_MS) {
           await setMood($, 'sleeping');

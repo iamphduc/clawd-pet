@@ -31,7 +31,7 @@ In fullscreen mode, Claude Code gives the area above the prompt at most half the
 | Searching | Scans with a magnifier. | <img src="docs/moods/searching.png" alt="Clawd searching" width="248"> |
 | Running a command | Hops beside a rocket. | <img src="docs/moods/running.png" alt="Clawd running a command" width="248"> |
 | Browsing the web | Watches a page load. | <img src="docs/moods/web.png" alt="Clawd browsing" width="248"> |
-| Running a subagent | Brings a small helper. Stays with it after the turn ends while background subagents still work, instead of falling asleep. | <img src="docs/moods/subagent.png" alt="Clawd with a helper" width="248"> |
+| Running a subagent | Brings a small helper. Stays with it after the turn ends while background subagents still work, and wakes up if one starts while Clawd is idle or asleep. | <img src="docs/moods/subagent.png" alt="Clawd with a helper" width="248"> |
 | Waiting for you | Waves beside a "?". Claude's prompt covers the band, so you see this only with `/pet waiting`. | <img src="docs/moods/waiting.png" alt="Clawd waving" width="248"> |
 | Passing tests or a build | Hops as a green check draws. | <img src="docs/moods/passed.png" alt="Clawd after passing checks" width="248"> |
 | Failing tests or a build | Droops beside a red X. | <img src="docs/moods/failed.png" alt="Clawd after failing checks" width="248"> |
