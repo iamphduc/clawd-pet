@@ -71,6 +71,10 @@ still pending, running, or waiting. If any are, Clawd shows "with a helper"
 with a count. It asks again every 2 seconds and goes idle when none are left.
 Teammates don't count, because they idle between messages.
 
+An idle or sleeping Clawd also asks every 2 seconds between turns. A helper
+can show up on the list after the turn ends, or the plugin can reload while
+one works; without this check, Clawd fell asleep beside a running helper.
+
 Clawd polls the engine's list instead of keeping its own count from spawn and
 `turn.complete` events. A count kept in the plugin is lost when the plugin
 reloads, and one missed event would leave Clawd waiting forever.

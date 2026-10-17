@@ -364,6 +364,38 @@ test('the pet stays with background helpers after the answer, then rests when th
   expect(await band.find({ text: 'chilling' })).toBeDefined();
 });
 
+test('a sleeping pet wakes up for a helper that starts after the turn ends', async ($, on) => {
+  const clock = mock.clock(on);
+  on('session.start', async () => ({ cwd: '/repo' }));
+  on('command.register', async () => ({ value: {} }) as never);
+  on('ui.blit', async () => ({ value: {} }));
+  on('turn.start', async (_$, e) => ({ turnId: e.turnId }));
+  on('turn.complete', async () => ({ text: '' }));
+  let statuses: AgentStatus[] = [];
+  on('agent.list', async () => ({
+    value: statuses.map((status, i) => ({ id: `a${i}`, description: 'scan', type: 'Explore', status })),
+  }));
+  await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true });
+  const band = await $.ui.mount(BAND);
+
+  await $.turn.start({ text: 'go', turnId: 't1' });
+  await $.turn.complete({ reason: 'answer', answer: 'done', durationMs: 1, isAborted: false, turnId: 't1' });
+  await clock.advance(70_000);
+  expect(await band.find({ text: 'sleeping' })).toBeDefined();
+
+  statuses = ['running'];
+  await clock.advance(2_500);
+  expect(await band.find({ text: 'with a helper' })).toBeDefined();
+  expect(await band.find({ text: '1 still working' })).toBeDefined();
+
+  statuses = ['completed'];
+  await clock.advance(2_500);
+  expect(await band.find({ text: 'chilling' })).toBeDefined();
+  // With no helpers left, Clawd still falls asleep.
+  await clock.advance(70_000);
+  expect(await band.find({ text: 'sleeping' })).toBeDefined();
+});
+
 test('a turn that answers after its tools still cheers', async ($, on) => {
   mock.clock(on);
   on('tool.call', async () => ({ result: 'ok' }));
