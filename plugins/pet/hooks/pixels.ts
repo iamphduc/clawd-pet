@@ -58,7 +58,7 @@ function scale2(art: string[]): string[] {
   return wide(art).flatMap((line) => [line, line]);
 }
 
-// Eyes are 4 x 2 (cross: 3 x 3) patches over the logo's eye holes.
+// Eyes are 4 x 2 patches over the logo's eye holes.
 const EYES = {
   open: ['.__.', '.__.'],
   shut: ['....', '.__.'],
@@ -66,7 +66,7 @@ const EYES = {
   happy: ['.__.', '_.._'],
 };
 
-type Eyes = keyof typeof EYES | 'cross';
+type Eyes = keyof typeof EYES;
 export type Pose = {
   lift?: number;
   squash?: boolean;
@@ -103,11 +103,6 @@ export function drawPet(
     // Wave the right arm: it rises to a short diagonal, then rests.
     stamp(canvas, ['____', '____'], 30, y + 4);
     stamp(canvas, ['..oo', '..oo', 'oo..', 'oo..'], 30, y + 2);
-  }
-  if (eyes === 'cross') {
-    stamp(canvas, ['r.r', '.r.', 'r.r'], 10, y + 1);
-    stamp(canvas, ['r.r', '.r.', 'r.r'], 24, y + 1);
-    return;
   }
   stamp(canvas, EYES[eyes], 9 + look, y + 2);
   stamp(canvas, EYES[eyes], 23 + look, y + 2);

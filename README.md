@@ -36,7 +36,7 @@ In fullscreen mode, Claude Code gives the area above the prompt at most half the
 | Passing tests or a build | Hops as a green check draws. | <img src="docs/moods/passed.png" alt="Clawd after passing checks" width="248"> |
 | Failing tests or a build | Droops beside a red X. | <img src="docs/moods/failed.png" alt="Clawd after failing checks" width="248"> |
 | Done with a turn, or committing | Cheers as confetti falls. | <img src="docs/moods/happy.png" alt="Clawd cheering" width="248"> |
-| Hitting an error, or a tool you denied | Shows X eyes and a sweat drop. | <img src="docs/moods/error.png" alt="Clawd after an error" width="248"> |
+| Hitting an error, or a tool you denied | Sweats beside a red `!`. | <img src="docs/moods/error.png" alt="Clawd after an error" width="248"> |
 | Stopped by your plan's usage limit | Sleeps until the limit resets. | <img src="docs/moods/sleeping.png" alt="Clawd resting" width="248"> |
 
 Under the mood name, a short line shows what Claude is working on, such as a file name, a search, a command's description, or a commit message.
