@@ -3,8 +3,8 @@ import type { MoodArt } from '../pixels.ts';
 
 export const error: MoodArt = {
   label: 'oops',
-  // The thin X eyes are on purpose: see docs/decisions.md.
-  pose: () => ({ squash: true, eyes: 'cross' }),
+  // Normal eyes look worried, not dead: see docs/decisions.md.
+  pose: () => ({ squash: true }),
   prop: (canvas, tick) => {
     // A sweat drop beside the head slides down, then a new one forms. It's
     // drawn in half-width pixels, fine enough to taper to a point.
